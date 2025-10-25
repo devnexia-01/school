@@ -1,0 +1,2881 @@
+# School ERP SaaS - System Requirements Document
+
+**Version:** 1.0  
+**Date:** October 24, 2025  
+**Project Type:** Multi-tenant SaaS Web & Mobile Application  
+**Document Status:** Draft
+
+---
+
+## Table of Contents
+
+1. [Executive Summary](#1-executive-summary)
+2. [Project Overview](#2-project-overview)
+3. [System Architecture](#3-system-architecture)
+4. [User Roles & Permissions](#4-user-roles--permissions)
+5. [Functional Requirements](#5-functional-requirements)
+6. [Non-Functional Requirements](#6-non-functional-requirements)
+7. [Technical Requirements](#7-technical-requirements)
+8. [Integration Requirements](#8-integration-requirements)
+9. [Security & Compliance](#9-security--compliance)
+10. [Data Requirements](#10-data-requirements)
+11. [UI/UX Requirements](#11-uiux-requirements)
+12. [Mobile Application Requirements](#12-mobile-application-requirements)
+13. [Deployment & Infrastructure](#13-deployment--infrastructure)
+14. [Testing Requirements](#14-testing-requirements)
+15. [Documentation Requirements](#15-documentation-requirements)
+16. [Project Constraints](#16-project-constraints)
+17. [Assumptions & Dependencies](#17-assumptions--dependencies)
+18. [Success Criteria](#18-success-criteria)
+19. [Appendix](#19-appendix)
+
+---
+
+## 1. Executive Summary
+
+### 1.1 Purpose
+This document outlines the comprehensive requirements for developing a **School ERP (Enterprise Resource Planning) System** as a **Software-as-a-Service (SaaS)** solution. The system will streamline and automate all aspects of school management including academic, administrative, financial, and communication operations.
+
+### 1.2 Scope
+The School ERP SaaS will serve as a unified platform for:
+- **K-12 Educational Institutions** (Kindergarten through Grade 12)
+- **Private and Government Schools**
+- **Small to Large Institutions** (50 to 5000+ students)
+- **Single and Multi-branch School Chains**
+
+### 1.3 Target Users
+- **Students**: 10,000+ concurrent users
+- **Parents**: 15,000+ concurrent users
+- **Faculty**: 2,000+ concurrent users
+- **Administrators**: 500+ concurrent users
+- **Principals**: 200+ concurrent users
+- **Super Admins**: Platform management team
+
+### 1.4 Key Objectives
+1. **Digitize** all school operations
+2. **Centralize** data management
+3. **Automate** repetitive tasks
+4. **Improve** communication between stakeholders
+5. **Enhance** academic performance tracking
+6. **Streamline** financial operations
+7. **Ensure** data security and compliance
+8. **Scale** efficiently for growing institutions
+
+---
+
+## 2. Project Overview
+
+### 2.1 Business Goals
+- Provide affordable, scalable school management solution
+- Reduce operational costs by 40%
+- Improve parent satisfaction by 60%
+- Increase teacher productivity by 50%
+- Enable data-driven decision making
+- Achieve 90%+ user adoption within 6 months
+
+### 2.2 System Overview
+A cloud-based, multi-tenant SaaS platform with:
+- **Web Application** (Desktop & Tablet optimized)
+- **Mobile Applications** (iOS & Android)
+- **RESTful API** for third-party integrations
+- **Real-time Communication** features
+- **Analytics & Reporting** engine
+- **Role-based Access Control** (RBAC)
+
+### 2.3 Key Features Summary
+- Student Information System (SIS)
+- Academic Management
+- Attendance Tracking (Students & Staff)
+- Examination & Results Management
+- Fee Management & Online Payments
+- Payroll & Salary Management
+- Library Management
+- Transport Management
+- Hostel Management (Optional)
+- Communication Hub (SMS, Email, Push Notifications)
+- Reports & Analytics
+- Mobile Apps for all user roles
+
+### 2.4 Deployment Model
+- **Cloud-hosted SaaS** (Multi-tenant architecture)
+- **Subscription-based pricing** (Monthly/Annual)
+- **Tiered Plans**: Basic, Standard, Premium, Enterprise
+- **Geographic Focus**: Initially targeting [Country/Region]
+
+---
+
+## 3. System Architecture
+
+### 3.1 Architecture Type
+**Multi-tier Architecture:**
+- **Presentation Layer**: Web (React/Vue/Angular) + Mobile (React Native/Flutter)
+- **API Layer**: RESTful API (Node.js/Django/Laravel)
+- **Business Logic Layer**: Application Server
+- **Data Layer**: Relational Database (PostgreSQL/MySQL)
+- **Cache Layer**: Redis/Memcached
+- **Storage Layer**: AWS S3/Azure Blob/GCP Storage
+
+### 3.2 Multi-tenancy Model
+- **Shared Database with Tenant Isolation** (tenant_id in all tables)
+- **Data Segregation**: Complete data isolation per school
+- **Customization**: Per-tenant configuration (branding, modules, features)
+- **Scalability**: Horizontal scaling for growing user base
+
+### 3.3 High-Level Architecture Diagram
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Load Balancer                           │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+   ┌────▼─────┐           ┌──────▼────┐
+   │ Web App  │           │ Mobile API│
+   │ (React)  │           │  Gateway  │
+   └────┬─────┘           └──────┬────┘
+        │                        │
+        └────────────┬───────────┘
+                     │
+            ┌────────▼─────────┐
+            │  Application     │
+            │  Server          │
+            │  (Node.js/Django)│
+            └────────┬─────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+   ┌────▼────┐  ┌───▼───┐   ┌───▼────┐
+   │Database │  │ Redis │   │File    │
+   │PostgreSQL│  │ Cache │   │Storage │
+   └─────────┘  └───────┘   │(S3)    │
+                             └────────┘
+```
+
+### 3.4 Technology Stack Recommendations
+
+**Frontend:**
+- Web: React.js + Next.js / Vue.js + Nuxt.js
+- Mobile: React Native / Flutter
+- UI Framework: Tailwind CSS / Material-UI / Ant Design
+
+**Backend:**
+- Node.js + Express.js / NestJS
+- OR Python + Django / FastAPI
+- OR PHP + Laravel
+
+**Database:**
+- Primary: PostgreSQL (preferred) / MySQL
+- Cache: Redis
+- Search: Elasticsearch (optional for large datasets)
+
+**File Storage:**
+- AWS S3 / Azure Blob Storage / GCP Cloud Storage
+
+**Real-time Communication:**
+- WebSockets (Socket.io)
+- Firebase Cloud Messaging (Push notifications)
+
+**Payment Gateway:**
+- Razorpay / Stripe / PayPal
+
+**SMS Gateway:**
+- Twilio / MSG91 / AWS SNS
+
+**Email Service:**
+- SendGrid / AWS SES / Mailgun
+
+**Hosting & Infrastructure:**
+- AWS (Recommended) / Azure / Google Cloud Platform
+- CDN: CloudFlare / AWS CloudFront
+- CI/CD: GitHub Actions / GitLab CI / Jenkins
+
+---
+
+## 4. User Roles & Permissions
+
+### 4.1 Role Definitions
+
+#### 4.1.1 Super Admin (Platform Owner)
+**Access Level:** Full system access across all schools
+- Manage all schools (tenants)
+- Manage subscriptions & billing
+- System configuration
+- Platform analytics
+- Support ticket management
+- Feature flag management
+
+#### 4.1.2 Admin (School Administrator)
+**Access Level:** Full access within their school
+- User management (Create, Update, Delete students, faculty, staff)
+- Academic configuration (Classes, subjects, timetable)
+- Fee management (Structure, collection, reports)
+- Exam management (Create exams, approve marks, publish results)
+- Attendance management (Students & staff)
+- Payroll management (Process salaries, generate slips)
+- Library management
+- Transport management
+- Communication (Send announcements, messages)
+- Reports & analytics
+- Settings & configuration
+
+#### 4.1.3 Principal
+**Access Level:** Strategic oversight and approvals
+- View all data (Read-only for most modules)
+- Approve critical requests (Leave, expenses, admissions)
+- Executive reports & analytics
+- Academic performance monitoring
+- Faculty performance review
+- Financial overview
+- Communication (School-wide announcements)
+- Policy decisions
+
+#### 4.1.4 Faculty (Teachers)
+**Access Level:** Academic operations
+- View assigned classes & students
+- Mark attendance (for their classes)
+- Create & manage assignments
+- Enter exam marks (for their subjects)
+- Upload study materials
+- View student performance
+- Communication (with students, parents, admin)
+- View own salary slips
+- Apply for leave
+- View timetable
+
+#### 4.1.5 Student
+**Access Level:** Self-service
+- View personal profile
+- View timetable
+- View attendance
+- Submit assignments
+- View exam results & report cards
+- Pay fees online
+- View library books (issued books)
+- View transport details
+- Communication (messages from teachers/admin)
+- Download study materials
+
+#### 4.1.6 Parent
+**Access Level:** Monitor child's progress
+- View child's profile
+- View child's attendance
+- View child's academic performance
+- View exam results & report cards
+- Pay fees online
+- View fee receipts
+- Communication (with teachers, admin)
+- View child's timetable
+- Track school bus (live tracking)
+- Apply leave for child
+- View child's library books
+
+### 4.2 Permission Matrix
+
+| Module/Feature | Super Admin | Admin | Principal | Faculty | Student | Parent |
+|----------------|-------------|-------|-----------|---------|---------|--------|
+| **User Management** |
+| Create Users | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Edit Users | ✅ | ✅ | ❌ | Self | Self | Self |
+| Delete Users | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View Users | ✅ | ✅ | ✅ | Limited | Self | Child only |
+| **Academic Management** |
+| Configure Classes | ✅ | ✅ | View | View | View | View |
+| Create Timetable | ✅ | ✅ | View | View | View | View |
+| Manage Subjects | ✅ | ✅ | View | View | View | View |
+| **Attendance** |
+| Mark Attendance | ✅ | ✅ | ❌ | ✅ (Own classes) | ❌ | ❌ |
+| View Attendance | ✅ | ✅ | ✅ | ✅ | Self | Child |
+| Attendance Reports | ✅ | ✅ | ✅ | ✅ (Own classes) | Self | Child |
+| **Examinations** |
+| Create Exams | ✅ | ✅ | View | ❌ | ❌ | ❌ |
+| Enter Marks | ✅ | ✅ | View | ✅ (Own subjects) | ❌ | ❌ |
+| Approve Marks | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Publish Results | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| View Results | ✅ | ✅ | ✅ | ✅ | Self | Child |
+| **Fee Management** |
+| Configure Fees | ✅ | ✅ | View | ❌ | ❌ | ❌ |
+| Collect Fees | ✅ | ✅ | ❌ | ❌ | Self | Child |
+| Fee Reports | ✅ | ✅ | ✅ | ❌ | Self | Child |
+| **Payroll** |
+| Configure Salary | ✅ | ✅ | View | ❌ | ❌ | ❌ |
+| Process Payroll | ✅ | ✅ | Approve | ❌ | ❌ | ❌ |
+| View Salary | ✅ | ✅ | ✅ | Self | ❌ | ❌ |
+| **Communication** |
+| Send Announcements | ✅ | ✅ | ✅ | Limited | ❌ | ❌ |
+| Send Messages | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Reports** |
+| View All Reports | ✅ | ✅ | ✅ | Limited | Self | Child |
+| Export Reports | ✅ | ✅ | ✅ | Limited | Self | Child |
+
+**Legend:**
+- ✅ Full Access
+- View: Read-only access
+- Self: Can only view/manage own data
+- Child: Can only view child's data
+- Limited: Restricted access (specific data only)
+- ❌ No Access
+
+---
+
+## 5. Functional Requirements
+
+### 5.1 User Management
+
+#### 5.1.1 Student Management
+**ID:** FR-UM-001  
+**Priority:** High  
+**Description:** Comprehensive student lifecycle management
+
+**Requirements:**
+- Create student profile with personal, academic, guardian details
+- Upload student documents (birth certificate, photo, transfer certificate)
+- Generate unique student ID
+- Bulk import students via CSV/Excel
+- Assign students to class/section
+- Track student academic history
+- Student promotion (class upgradation)
+- Generate student ID cards
+- Transfer certificate generation
+- Student search & advanced filtering
+- Student profile export
+
+**Acceptance Criteria:**
+- Admin can add student in < 2 minutes
+- System validates mandatory fields
+- Duplicate student detection based on name + DOB
+- Student login credentials auto-generated
+- Parent account automatically linked
+
+---
+
+#### 5.1.2 Faculty Management
+**ID:** FR-UM-002  
+**Priority:** High  
+**Description:** Faculty/Teacher management system
+
+**Requirements:**
+- Create faculty profile (personal, professional, employment details)
+- Assign subjects and classes to faculty
+- Upload faculty documents (certificates, ID proof)
+- Generate employee ID
+- Bulk import faculty via CSV
+- Track teaching schedule and workload
+- Faculty performance tracking
+- Faculty search & filtering
+
+**Acceptance Criteria:**
+- Admin can onboard faculty in < 3 minutes
+- System validates qualification requirements
+- Auto-generate login credentials
+- Email invitation sent with credentials
+
+---
+
+#### 5.1.3 Staff Management
+**ID:** FR-UM-003  
+**Priority:** Medium  
+**Description:** Non-teaching staff management
+
+**Requirements:**
+- Create staff profiles (librarian, accountant, peon, guards, etc.)
+- Upload staff documents
+- Generate employee ID
+- Track attendance and leave
+- Role assignment
+
+---
+
+#### 5.1.4 Parent Management
+**ID:** FR-UM-004  
+**Priority:** High  
+**Description:** Parent/Guardian management
+
+**Requirements:**
+- Create parent accounts (linked to students)
+- Support multiple students per parent account
+- Parent contact details management
+- Parent login credentials
+- Emergency contact management
+
+---
+
+### 5.2 Academic Management
+
+#### 5.2.1 Class & Section Management
+**ID:** FR-AC-001  
+**Priority:** High  
+**Description:** Manage classes and sections
+
+**Requirements:**
+- Create classes (e.g., 1st Grade, 2nd Grade, ... 12th Grade)
+- Add sections per class (A, B, C, etc.)
+- Set class capacity (max students)
+- Assign class teacher
+- Define streams for senior classes (Science, Commerce, Arts)
+
+---
+
+#### 5.2.2 Subject Management
+**ID:** FR-AC-002  
+**Priority:** High  
+**Description:** Subject configuration and management
+
+**Requirements:**
+- Create subjects with subject code
+- Categorize subjects (Core, Elective, Extra-curricular)
+- Assign subjects to classes
+- Assign faculty to subjects
+- Upload syllabus per subject
+
+---
+
+#### 5.2.3 Timetable Management
+**ID:** FR-AC-003  
+**Priority:** High  
+**Description:** Automated timetable generation and management
+
+**Requirements:**
+- Create master timetable (class-wise, period-wise)
+- Define periods with time slots
+- Assign subject + faculty per period
+- Detect and prevent scheduling conflicts (teacher, room)
+- Generate timetable reports (class-wise, faculty-wise)
+- Publish timetable (notify students & faculty)
+- Handle substitutions for absent teachers
+- Export timetable (PDF, Excel)
+
+**Acceptance Criteria:**
+- System detects teacher clash (same teacher, 2 classes, same time)
+- System detects room clash (same room, 2 classes, same time)
+- Timetable changes notify affected users
+- Mobile-responsive timetable view
+
+---
+
+#### 5.2.4 Academic Year Configuration
+**ID:** FR-AC-004  
+**Priority:** High  
+**Description:** Configure academic year, terms, holidays
+
+**Requirements:**
+- Set current academic year (start date, end date)
+- Define terms/semesters
+- Configure holiday calendar
+- Academic calendar publishing
+
+---
+
+### 5.3 Attendance Management
+
+#### 5.3.1 Student Attendance
+**ID:** FR-AT-001  
+**Priority:** High  
+**Description:** Track daily student attendance
+
+**Requirements:**
+- Mark attendance (Present, Absent, Late, Half-day)
+- Class-wise attendance marking
+- Period-wise attendance (optional)
+- Biometric integration support (optional)
+- Attendance reports (daily, monthly, student-wise)
+- Defaulters list (students below attendance threshold)
+- Attendance vs. performance analytics
+- SMS/Email notification to parents on absence
+- Student leave application & approval
+
+**Acceptance Criteria:**
+- Teachers can mark attendance in < 1 minute per class
+- Real-time attendance updates
+- Parent notified within 1 hour of absence
+- Attendance percentage auto-calculated
+
+---
+
+#### 5.3.2 Faculty Attendance
+**ID:** FR-AT-002  
+**Priority:** High  
+**Description:** Track daily faculty/staff attendance
+
+**Requirements:**
+- Mark faculty attendance (manual or biometric)
+- Late entry tracking
+- Faculty leave management (apply, approve, track balance)
+- Leave types (Casual, Sick, Maternity, LOP)
+- Attendance reports (monthly, department-wise)
+- Absent teacher alerts (for substitution arrangement)
+
+---
+
+### 5.4 Examination & Results Management
+
+#### 5.4.1 Exam Management
+**ID:** FR-EX-001  
+**Priority:** High  
+**Description:** End-to-end exam lifecycle management
+
+**Requirements:**
+- Create exam (Type: Unit Test, Mid-term, Final)
+- Define exam schedule (date, time, subject, duration)
+- Assign classes to exam
+- Set total marks per subject
+- Configure grading scale (A+, A, B, C, D, F)
+- Assign invigilators
+- Generate exam hall tickets
+- Publish exam schedule (notify students)
+
+---
+
+#### 5.4.2 Marks Entry & Management
+**ID:** FR-EX-002  
+**Priority:** High  
+**Description:** Enter and manage exam marks
+
+**Requirements:**
+- Marks entry interface (teacher-wise, subject-wise)
+- Student-wise mark entry grid
+- Bulk upload marks via Excel
+- Marks validation (should not exceed max marks)
+- Marks verification workflow (faculty enters → admin approves)
+- Publish marks to students
+- Mark absent students
+
+**Acceptance Criteria:**
+- Teachers can enter marks for 50 students in < 10 minutes
+- System validates mark range
+- Marks locked after admin approval
+
+---
+
+#### 5.4.3 Report Card Generation
+**ID:** FR-EX-003  
+**Priority:** High  
+**Description:** Generate student report cards
+
+**Requirements:**
+- Report card template design (customizable)
+- Auto-calculate total marks, percentage, grade, rank
+- Subject-wise marks display
+- Teacher remarks section
+- Generate report cards (individual, class-wise)
+- Bulk download report cards (PDF)
+- Email/SMS report cards to parents
+- Print report cards
+
+**Acceptance Criteria:**
+- Report cards generated within 5 minutes for entire class
+- PDF size optimized (< 500KB per report)
+- School branding (logo, header) on report card
+
+---
+
+### 5.5 Fee Management
+
+#### 5.5.1 Fee Structure Configuration
+**ID:** FR-FM-001  
+**Priority:** High  
+**Description:** Define and manage fee structures
+
+**Requirements:**
+- Create fee structure (academic year-wise, class-wise)
+- Define fee categories (Tuition, Transport, Library, Lab, Sports, Exam, Misc.)
+- Set amount per category
+- Define payment schedule (Monthly, Quarterly, Annual)
+- Discounts and scholarships (percentage or fixed amount)
+- Fee structure cloning (copy from previous year)
+
+---
+
+#### 5.5.2 Fee Collection
+**ID:** FR-FM-002  
+**Priority:** High  
+**Description:** Fee collection and payment processing
+
+**Requirements:**
+- Manual fee collection (cash, cheque)
+- Online payment integration (Credit/Debit card, Net Banking, UPI, Wallets)
+- Partial payment support
+- Payment receipt generation (auto-numbered)
+- Receipt printing/emailing
+- Payment mode tracking
+- Bulk fee collection (class-wise)
+- Payment gateway integration (Razorpay, Stripe, PayPal)
+
+**Acceptance Criteria:**
+- Online payment processed within 30 seconds
+- Payment receipt auto-generated and emailed
+- Failed payments logged and notified
+- PCI-DSS compliant payment processing
+
+---
+
+#### 5.5.3 Fee Defaulters Management
+**ID:** FR-FM-003  
+**Priority:** Medium  
+**Description:** Track and manage fee defaulters
+
+**Requirements:**
+- Defaulters list (students with overdue fees)
+- Filter by class, amount overdue, days overdue
+- Send reminder notifications (SMS, Email, Push)
+- Generate demand letters
+- Late fee calculation (auto or manual)
+- Payment plan setup (EMI options)
+
+---
+
+#### 5.5.4 Fee Reports
+**ID:** FR-FM-004  
+**Priority:** High  
+**Description:** Fee collection reports and analytics
+
+**Requirements:**
+- Daily collection report
+- Monthly collection summary
+- Fee head-wise collection
+- Class-wise collection
+- Outstanding fee report
+- Payment mode-wise report
+- Defaulter report
+- Fee concession report
+- Export reports (Excel, PDF)
+
+---
+
+### 5.6 Payroll & Salary Management
+
+#### 5.6.1 Salary Structure Configuration
+**ID:** FR-PR-001  
+**Priority:** High  
+**Description:** Define salary components and structures
+
+**Requirements:**
+- Define salary components (Earnings: Basic, HRA, DA, Special Allowance)
+- Define deductions (PF, ESI, TDS, Professional Tax)
+- Create salary templates (by role/department)
+- Assign salary structure to employees
+- Salary revision management
+
+---
+
+#### 5.6.2 Salary Processing
+**ID:** FR-PR-002  
+**Priority:** High  
+**Description:** Monthly salary calculation and processing
+
+**Requirements:**
+- Select month/year for processing
+- Auto-calculate salary based on attendance
+- Attendance-based deductions (absent days, late entries)
+- Manual adjustments (bonus, penalty, advance, loan EMI)
+- Tax calculation (TDS deduction)
+- Review salary sheet (employee-wise)
+- Approve and lock payroll
+- Bank transfer sheet generation (for bulk payments)
+
+**Acceptance Criteria:**
+- Salary processed for 100 employees in < 5 minutes
+- Attendance auto-fetched and applied
+- Tax calculation as per current tax slabs
+- Payroll locked after approval (no further edits)
+
+---
+
+#### 5.6.3 Salary Slip Generation
+**ID:** FR-PR-003  
+**Priority:** High  
+**Description:** Generate and distribute salary slips
+
+**Requirements:**
+- Generate salary slips (PDF format)
+- Salary slip components (Earnings, Deductions, Net Salary)
+- Bulk download salary slips
+- Email salary slips to employees
+- Salary slip history (employee-wise)
+- Password-protected salary slips (optional)
+
+---
+
+#### 5.6.4 Loan & Advance Management
+**ID:** FR-PR-004  
+**Priority:** Medium  
+**Description:** Manage employee loans and advances
+
+**Requirements:**
+- Loan request management
+- Loan approval workflow
+- EMI calculation and deduction
+- Advance salary processing
+- Loan repayment tracking
+
+---
+
+### 5.7 Library Management
+
+#### 5.7.1 Book Management
+**ID:** FR-LB-001  
+**Priority:** Medium  
+**Description:** Library catalog management
+
+**Requirements:**
+- Add books (Title, Author, ISBN, Publisher, Category, Copies)
+- Upload book cover
+- Bulk import books via CSV
+- Book categorization (Fiction, Non-fiction, Reference, etc.)
+- Track book copies (Total, Available, Issued)
+- Book barcode generation (optional)
+- Book search (by title, author, ISBN, category)
+
+---
+
+#### 5.7.2 Book Issue & Return
+**ID:** FR-LB-002  
+**Priority:** Medium  
+**Description:** Issue and return books
+
+**Requirements:**
+- Issue book to student/faculty (scan barcode or manual entry)
+- Set return date (auto-calculated based on rules)
+- Issue confirmation (email/SMS)
+- Return book (scan or manual)
+- Overdue fine calculation (auto)
+- Fine collection and receipt
+- Book renewal (if allowed)
+- Lost book management
+
+**Acceptance Criteria:**
+- Book issued in < 30 seconds
+- System prevents issuing if:
+  - User has exceeded book limit
+  - User has overdue books/fines
+  - Book not available
+
+---
+
+#### 5.7.3 Library Reports
+**ID:** FR-LB-003  
+**Priority:** Medium  
+**Description:** Library analytics and reports
+
+**Requirements:**
+- Issued books report (current)
+- Overdue books report
+- Most borrowed books
+- User-wise borrowing history
+- Inventory report (total books, available, issued)
+- Fine collection report
+
+---
+
+### 5.8 Transport Management
+
+#### 5.8.1 Route & Vehicle Management
+**ID:** FR-TR-001  
+**Priority:** Medium  
+**Description:** Manage transport routes and vehicles
+
+**Requirements:**
+- Create routes (route name, route number)
+- Add stops with sequence (stop name, pickup/drop time)
+- Assign vehicle to route
+- Assign driver and conductor to vehicle
+- Vehicle details (number, type, capacity, insurance, fitness certificate)
+- Driver details (name, license number, contact)
+- Route map visualization
+
+---
+
+#### 5.8.2 Student Transport Assignment
+**ID:** FR-TR-002  
+**Priority:** Medium  
+**Description:** Assign students to routes
+
+**Requirements:**
+- Assign students to route and stop
+- Generate route-wise student list
+- Define transport fee structure
+- Transport ID card generation
+
+---
+
+#### 5.8.3 Live Bus Tracking
+**ID:** FR-TR-003  
+**Priority:** Low (Optional)  
+**Description:** Real-time GPS tracking of school buses
+
+**Requirements:**
+- GPS device integration
+- Real-time bus location on map
+- ETA calculation
+- Parent notifications (bus approaching, bus departed, etc.)
+- Route deviation alerts
+
+---
+
+### 5.9 Communication Module
+
+#### 5.9.1 Messaging System
+**ID:** FR-CM-001  
+**Priority:** High  
+**Description:** Internal messaging between users
+
+**Requirements:**
+- Send message (one-to-one, one-to-many)
+- Message categories (Academic, Administrative, Personal)
+- Attach files to messages
+- Message read receipts
+- Message search and filter
+- Inbox, Sent, Drafts folders
+
+---
+
+#### 5.9.2 Announcements
+**ID:** FR-CM-002  
+**Priority:** High  
+**Description:** School-wide or class-specific announcements
+
+**Requirements:**
+- Create announcement (school-wide, class-specific, role-specific)
+- Rich text editor (formatting, images, links)
+- Attach documents
+- Schedule announcements (publish later)
+- Pin important announcements
+- Announcement approval workflow (optional)
+- Announcement archive
+
+---
+
+#### 5.9.3 Notifications (SMS, Email, Push)
+**ID:** FR-CM-003  
+**Priority:** High  
+**Description:** Multi-channel notification system
+
+**Requirements:**
+- Send notifications via SMS, Email, Push (mobile app)
+- Notification triggers:
+  - Fee reminder (before due date)
+  - Attendance alert (student absent)
+  - Exam notification (schedule, results)
+  - Assignment posted
+  - Leave approval/rejection
+  - Salary credited
+  - General announcements
+- Notification templates (customizable with variables)
+- Notification scheduling
+- Notification delivery tracking (sent, delivered, failed)
+- Opt-in/opt-out preferences
+
+**Acceptance Criteria:**
+- SMS delivered within 30 seconds
+- Email delivered within 2 minutes
+- Push notification delivered instantly
+- Delivery failure logs maintained
+
+---
+
+#### 5.9.4 Parent-Teacher Meeting
+**ID:** FR-CM-004  
+**Priority:** Medium  
+**Description:** Schedule and manage PTM
+
+**Requirements:**
+- Create PTM event (date, time, location)
+- Slot booking system (parents book time slots)
+- Slot duration configuration
+- Notification to parents (PTM scheduled)
+- Reminders (1 day before, 1 hour before)
+- PTM attendance tracking
+- Reschedule/cancel slots
+
+---
+
+### 5.10 Reports & Analytics
+
+#### 5.10.1 Academic Reports
+**ID:** FR-RP-001  
+**Priority:** High  
+**Description:** Academic performance reports
+
+**Requirements:**
+- Class-wise performance report
+- Subject-wise performance report
+- Student-wise progress report
+- Topper list (class, school)
+- Underperformer list
+- Attendance vs. performance correlation
+- Performance trend analysis (term-wise, year-on-year)
+- Comparative reports (current vs. previous)
+
+---
+
+#### 5.10.2 Financial Reports
+**ID:** FR-RP-002  
+**Priority:** High  
+**Description:** Financial analytics and reports
+
+**Requirements:**
+- Income vs. expense report
+- Fee collection summary (daily, monthly, yearly)
+- Outstanding dues report
+- Payment mode-wise collection
+- Payroll expense summary
+- Department-wise expense
+- Profit & loss statement
+- Budget vs. actual report
+
+---
+
+#### 5.10.3 Custom Report Builder
+**ID:** FR-RP-003  
+**Priority:** Medium  
+**Description:** Create custom reports
+
+**Requirements:**
+- Select data source (tables/entities)
+- Choose fields/columns
+- Apply filters (date range, class, section, etc.)
+- Group by dimensions
+- Aggregate functions (sum, average, count)
+- Visualization options (table, chart, graph)
+- Save report template
+- Schedule automated reports (email delivery)
+
+---
+
+### 5.11 Dashboard & Analytics
+
+#### 5.11.1 Admin Dashboard
+**ID:** FR-DB-001  
+**Priority:** High  
+**Description:** Real-time school operations dashboard
+
+**Requirements:**
+- Quick stats cards (total students, faculty, staff)
+- Today's attendance (students, staff %)
+- Pending fees (total amount)
+- Upcoming events
+- Charts: Enrollment trend, fee collection, attendance trend
+- Recent activities feed
+- Critical alerts (low attendance, fee defaulters, etc.)
+- Quick actions (add student, send notification)
+
+---
+
+#### 5.11.2 Principal Dashboard
+**ID:** FR-DB-002  
+**Priority:** High  
+**Description:** Executive dashboard for strategic oversight
+
+**Requirements:**
+- Executive summary (KPIs)
+- Performance metrics (academic, financial, operational)
+- Pending approvals count
+- Strategic analytics (enrollment trend, retention rate, etc.)
+- Comparison reports (term-wise, year-wise)
+- Critical alerts (urgent attention needed)
+
+---
+
+#### 5.11.3 Faculty Dashboard
+**ID:** FR-DB-003  
+**Priority:** High  
+**Description:** Teacher's daily operations dashboard
+
+**Requirements:**
+- Today's schedule (periods, classes)
+- Pending tasks (mark attendance, grade assignments)
+- Assigned classes and subjects
+- Recent announcements
+- Quick actions (mark attendance, create assignment)
+
+---
+
+#### 5.11.4 Student Dashboard
+**ID:** FR-DB-004  
+**Priority:** High  
+**Description:** Student's personalized dashboard
+
+**Requirements:**
+- Today's timetable
+- Pending assignments (with due dates)
+- Upcoming exams
+- Attendance summary (current month %)
+- Recent notifications
+- Fee status (pending amount)
+- Quick links (pay fees, view results, submit assignment)
+
+---
+
+#### 5.11.5 Parent Dashboard
+**ID:** FR-DB-005  
+**Priority:** High  
+**Description:** Parent's child monitoring dashboard
+
+**Requirements:**
+- Child selection (if multiple children)
+- Child's attendance (current month %)
+- Academic performance summary
+- Pending fees alert
+- Recent notifications from school
+- Upcoming events (PTM, exams)
+- Quick actions (pay fees, contact teacher, track bus)
+
+---
+
+## 6. Non-Functional Requirements
+
+### 6.1 Performance Requirements
+
+#### 6.1.1 Response Time
+**ID:** NFR-PF-001  
+**Priority:** High
+
+- **Page Load Time:** < 3 seconds (initial load), < 1 second (subsequent pages)
+- **API Response Time:** < 500ms (average), < 2 seconds (complex queries)
+- **Database Query Time:** < 200ms (simple), < 1 second (complex joins)
+- **Report Generation:** < 10 seconds (up to 1000 records), < 30 seconds (complex reports)
+- **File Upload:** 10MB file in < 30 seconds (on average connection)
+- **Search Results:** < 1 second (for 10,000+ records)
+
+#### 6.1.2 Throughput
+**ID:** NFR-PF-002  
+**Priority:** High
+
+- Support **5,000+ concurrent users** per server instance
+- Handle **50,000+ API requests per minute**
+- Process **1,000 fee transactions per hour**
+- Support **500 simultaneous file uploads**
+
+#### 6.1.3 Scalability
+**ID:** NFR-PF-003  
+**Priority:** High
+
+- **Horizontal Scalability:** Add server instances as load increases
+- **Database Scalability:** Support read replicas for reporting
+- **Storage Scalability:** Auto-scale file storage as needed
+- **Support Growth:** System should handle 10x current load without major redesign
+
+---
+
+### 6.2 Availability & Reliability
+
+#### 6.2.1 Uptime
+**ID:** NFR-AV-001  
+**Priority:** Critical
+
+- **System Availability:** 99.9% uptime (< 9 hours downtime per year)
+- **Planned Maintenance:** Maximum 4 hours per month, during off-peak hours
+- **Recovery Time Objective (RTO):** < 4 hours
+- **Recovery Point Objective (RPO):** < 1 hour (max data loss)
+
+#### 6.2.2 Backup & Disaster Recovery
+**ID:** NFR-AV-002  
+**Priority:** Critical
+
+- **Automated Daily Backups:** Full database backup daily
+- **Incremental Backups:** Every 6 hours
+- **Backup Retention:** 30 days (daily), 12 months (monthly)
+- **Geographic Redundancy:** Backups stored in multiple geographic locations
+- **Disaster Recovery Plan:** Documented and tested quarterly
+- **Backup Restoration Time:** < 2 hours for full system
+
+---
+
+### 6.3 Security Requirements
+
+#### 6.3.1 Authentication
+**ID:** NFR-SC-001  
+**Priority:** Critical
+
+- **Password Policy:**
+  - Minimum 8 characters
+  - Mix of uppercase, lowercase, numbers, special characters
+  - Password expiry: 90 days (configurable)
+  - Password history: Cannot reuse last 5 passwords
+- **Multi-Factor Authentication (MFA):** Optional for admin roles, mandatory for financial operations
+- **Session Management:**
+  - Session timeout: 30 minutes of inactivity
+  - Concurrent session control
+  - Force logout on password change
+- **Account Lockout:** Lock account after 5 failed login attempts
+- **Password Reset:** Secure password reset via email/SMS OTP
+
+#### 6.3.2 Authorization
+**ID:** NFR-SC-002  
+**Priority:** Critical
+
+- **Role-Based Access Control (RBAC):** Enforce strict role-based permissions
+- **Principle of Least Privilege:** Users have minimum necessary access
+- **Data Isolation:** Complete tenant (school) data segregation
+- **API Security:** JWT-based authentication for API access
+- **Permission Inheritance:** Hierarchical permission model
+
+#### 6.3.3 Data Encryption
+**ID:** NFR-SC-003  
+**Priority:** Critical
+
+- **Data at Rest:** AES-256 encryption for sensitive data (passwords, financial data)
+- **Data in Transit:** TLS 1.3 for all communications
+- **Database Encryption:** Encrypted database backups
+- **File Storage Encryption:** Encrypt uploaded files
+- **Key Management:** Secure key rotation policy
+
+#### 6.3.4 Audit Logging
+**ID:** NFR-SC-004  
+**Priority:** High
+
+- **User Activity Logs:** Track all user actions (login, CRUD operations)
+- **Admin Action Logs:** Detailed logs for admin activities
+- **Financial Transaction Logs:** Immutable logs for all financial transactions
+- **API Access Logs:** Log all API requests with timestamps
+- **Log Retention:** Minimum 1 year, extendable to 7 years for financial logs
+- **Log Integrity:** Tamper-proof logging mechanism
+
+#### 6.3.5 Compliance
+**ID:** NFR-SC-005  
+**Priority:** High
+
+- **GDPR Compliance:** (If serving EU users)
+  - Right to access personal data
+  - Right to erasure (data deletion)
+  - Data portability
+  - Consent management
+- **COPPA Compliance:** (If serving children under 13 in US)
+- **Local Data Protection Laws:** Compliance with [Country] data protection regulations
+- **PCI-DSS Compliance:** For payment card data handling
+- **SOC 2 Type II:** (Target for enterprise customers)
+
+---
+
+### 6.4 Usability Requirements
+
+#### 6.4.1 User Interface
+**ID:** NFR-US-001  
+**Priority:** High
+
+- **Responsive Design:** Support Desktop (1920x1080), Tablet (1024x768), Mobile (375x667)
+- **Browser Support:**
+  - Chrome (latest 2 versions)
+  - Firefox (latest 2 versions)
+  - Safari (latest 2 versions)
+  - Edge (latest 2 versions)
+- **Intuitive Navigation:** Maximum 3 clicks to reach any feature
+- **Consistent Design:** Uniform UI/UX across all modules
+- **Loading Indicators:** Visual feedback for all async operations
+- **Error Messages:** Clear, actionable error messages
+
+#### 6.4.2 Accessibility
+**ID:** NFR-US-002  
+**Priority:** Medium
+
+- **WCAG 2.1 Level AA Compliance:**
+  - Keyboard navigation support
+  - Screen reader compatibility
+  - Color contrast ratios (4.5:1 for normal text)
+  - Alternative text for images
+  - Form label associations
+- **Font Size:** Adjustable (Small, Medium, Large)
+- **Dark Mode:** Optional dark theme
+
+#### 6.4.3 Localization & Internationalization
+**ID:** NFR-US-003  
+**Priority:** Medium
+
+- **Multi-language Support:**
+  - English (default)
+  - [Local Language 1]
+  - [Local Language 2]
+  - Support for adding new languages
+- **Date Format:** Configurable (DD/MM/YYYY, MM/DD/YYYY)
+- **Time Format:** 12-hour / 24-hour
+- **Currency:** Configurable currency symbol and format
+- **Number Format:** Locale-specific number formatting
+
+#### 6.4.4 Help & Documentation
+**ID:** NFR-US-004  
+**Priority:** Medium
+
+- **In-app Help:** Context-sensitive help tooltips
+- **User Manual:** Comprehensive user documentation (PDF)
+- **Video Tutorials:** Role-wise video guides
+- **FAQ Section:** Searchable knowledge base
+- **Chatbot Support:** AI-powered initial support (optional)
+
+---
+
+### 6.5 Maintainability & Supportability
+
+#### 6.5.1 Code Quality
+**ID:** NFR-MT-001  
+**Priority:** High
+
+- **Code Standards:** Follow industry-standard coding conventions
+- **Code Documentation:** Inline comments for complex logic
+- **API Documentation:** Swagger/OpenAPI documentation
+- **Code Coverage:** Minimum 70% unit test coverage
+- **Static Analysis:** Automated code quality checks (SonarQube)
+
+#### 6.5.2 Modularity
+**ID:** NFR-MT-002  
+**Priority:** High
+
+- **Microservices Architecture:** (Optional, for large scale)
+- **Modular Monolith:** Clear module boundaries
+- **Loose Coupling:** Minimize inter-module dependencies
+- **Feature Flags:** Enable/disable features without code changes
+
+#### 6.5.3 Monitoring & Logging
+**ID:** NFR-MT-003  
+**Priority:** High
+
+- **Application Monitoring:** Real-time performance monitoring (New Relic, Datadog)
+- **Error Tracking:** Automated error reporting (Sentry, Rollbar)
+- **Log Aggregation:** Centralized logging (ELK Stack, CloudWatch)
+- **Alerting:** Real-time alerts for critical issues
+- **Health Check Endpoints:** API endpoints for system health
+
+#### 6.5.4 Deployment
+**ID:** NFR-MT-004  
+**Priority:** High
+
+- **CI/CD Pipeline:** Automated build, test, and deployment
+- **Zero-Downtime Deployment:** Blue-green or rolling deployment
+- **Rollback Capability:** Quick rollback to previous version
+- **Environment Management:** Dev, Staging, Production environments
+- **Infrastructure as Code:** Terraform/CloudFormation for infrastructure
+
+---
+
+### 6.6 Compatibility Requirements
+
+#### 6.6.1 Browser Compatibility
+**ID:** NFR-CM-001  
+**Priority:** High
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Opera 76+ (optional)
+
+#### 6.6.2 Mobile OS Compatibility
+**ID:** NFR-CM-002  
+**Priority:** High
+
+- **iOS:** 13.0 and above
+- **Android:** 8.0 (Oreo) and above
+- **Tablets:** iPad OS 13+, Android tablets
+
+#### 6.6.3 Third-party Integration Compatibility
+**ID:** NFR-CM-003  
+**Priority:** Medium
+
+- Payment Gateways: Razorpay, Stripe, PayPal
+- SMS Gateways: Twilio, MSG91
+- Email Services: SendGrid, AWS SES
+- Biometric Devices: Standard SOAP/REST APIs
+- Accounting Software: Tally, QuickBooks (export compatibility)
+
+---
+
+## 7. Technical Requirements
+
+### 7.1 Technology Stack
+
+#### 7.1.1 Frontend Technologies
+**ID:** TR-TS-001
+
+**Recommended:**
+- **Framework:** React.js 18+ with Next.js 13+ / Vue.js 3+ with Nuxt.js 3+
+- **State Management:** Redux Toolkit / Pinia
+- **UI Framework:** Tailwind CSS / Material-UI / Ant Design
+- **Form Handling:** React Hook Form / Formik
+- **Data Fetching:** React Query / Axios
+- **Charts:** Recharts / Chart.js / ApexCharts
+- **Icons:** Lucide React / Heroicons
+- **Date Handling:** date-fns / Day.js
+
+#### 7.1.2 Backend Technologies
+**ID:** TR-TS-002
+
+**Option 1: Node.js**
+- **Runtime:** Node.js 18+ LTS
+- **Framework:** Express.js / NestJS
+- **ORM:** Prisma / TypeORM / Sequelize
+- **Authentication:** JWT / Passport.js
+- **Validation:** Joi / Zod
+
+**Option 2: Python**
+- **Runtime:** Python 3.10+
+- **Framework:** Django 4+ / FastAPI
+- **ORM:** Django ORM / SQLAlchemy
+- **Authentication:** Django Auth / OAuth2
+
+**Option 3: PHP**
+- **Runtime:** PHP 8.1+
+- **Framework:** Laravel 10+
+- **ORM:** Eloquent
+- **Authentication:** Laravel Sanctum / Passport
+
+#### 7.1.3 Database
+**ID:** TR-TS-003
+
+**Primary Database:**
+- PostgreSQL 14+ (Recommended)
+- OR MySQL 8.0+
+
+**Caching:**
+- Redis 7+
+
+**Search Engine (Optional):**
+- Elasticsearch 8+ (for large datasets)
+
+#### 7.1.4 Mobile Technologies
+**ID:** TR-TS-004
+
+**Cross-platform:**
+- React Native 0.71+ / Flutter 3+
+- Expo (for React Native)
+
+**Native:**
+- iOS: Swift 5+ (if native required)
+- Android: Kotlin (if native required)
+
+#### 7.1.5 Cloud & Infrastructure
+**ID:** TR-TS-005
+
+**Cloud Provider:** AWS (Recommended) / Azure / GCP
+
+**Services:**
+- **Compute:** EC2 / ECS / Lambda
+- **Database:** RDS (PostgreSQL/MySQL)
+- **Storage:** S3 / Blob Storage
+- **CDN:** CloudFront / Azure CDN
+- **Load Balancer:** Application Load Balancer
+- **Queue:** SQS / Service Bus
+- **Monitoring:** CloudWatch / Application Insights
+
+**Containerization:**
+- Docker
+- Kubernetes (for large scale) / ECS
+
+**CI/CD:**
+- GitHub Actions / GitLab CI / Jenkins
+
+---
+
+### 7.2 API Requirements
+
+#### 7.2.1 API Architecture
+**ID:** TR-API-001  
+**Priority:** High
+
+- **REST API:** Follow RESTful principles
+- **API Versioning:** URL versioning (e.g., /api/v1/)
+- **HTTP Methods:** GET, POST, PUT, PATCH, DELETE
+- **Response Format:** JSON
+- **Status Codes:** Standard HTTP status codes
+- **Error Handling:** Consistent error response format
+
+**Error Response Format:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  },
+  "timestamp": "2025-10-24T10:30:00Z"
+}
+```
+
+#### 7.2.2 API Authentication
+**ID:** TR-API-002  
+**Priority:** Critical
+
+- **JWT-based Authentication:** Access token + Refresh token
+- **Token Expiry:** Access token: 15 minutes, Refresh token: 7 days
+- **Authorization Header:** Bearer token
+- **API Key:** For third-party integrations (optional)
+
+#### 7.2.3 API Rate Limiting
+**ID:** TR-API-003  
+**Priority:** High
+
+- **Rate Limit:** 100 requests per minute per user
+- **Burst Limit:** 200 requests per minute (short burst)
+- **Rate Limit Headers:** Include X-RateLimit headers in response
+- **Throttling:** Graceful degradation on rate limit exceed
+
+#### 7.2.4 API Documentation
+**ID:** TR-API-004  
+**Priority:** High
+
+- **OpenAPI 3.0 Specification:** Complete API documentation
+- **Interactive Documentation:** Swagger UI / Postman Collection
+- **Code Examples:** Sample requests/responses for all endpoints
+- **Changelog:** Version-wise API changes
+
+---
+
+### 7.3 Database Requirements
+
+#### 7.3.1 Database Design Principles
+**ID:** TR-DB-001  
+**Priority:** High
+
+- **Normalization:** Minimum 3NF (Third Normal Form)
+- **Multi-tenancy:** tenant_id in all tables for data isolation
+- **Soft Delete:** Mark records as deleted instead of hard delete
+- **Audit Fields:** created_at, updated_at, created_by, updated_by
+- **Data Integrity:** Foreign key constraints, unique constraints
+- **Indexing:** Proper indexing for frequent queries
+
+#### 7.3.2 Database Performance
+**ID:** TR-DB-002  
+**Priority:** High
+
+- **Query Optimization:** Optimize slow queries (< 200ms)
+- **Connection Pooling:** Efficient connection management
+- **Read Replicas:** For reporting and analytics (optional)
+- **Database Caching:** Query result caching (Redis)
+- **Partitioning:** Table partitioning for large tables (optional)
+
+#### 7.3.3 Database Backup
+**ID:** TR-DB-003  
+**Priority:** Critical
+
+- **Automated Backups:** Daily full backup, 6-hourly incremental
+- **Backup Encryption:** Encrypted backups
+- **Backup Testing:** Monthly backup restoration test
+- **Backup Retention:** 30 days (daily), 12 months (monthly)
+
+---
+
+### 7.4 Security Technical Requirements
+
+#### 7.4.1 Application Security
+**ID:** TR-SC-001  
+**Priority:** Critical
+
+- **SQL Injection Prevention:** Parameterized queries / ORM
+- **XSS Prevention:** Input sanitization, output encoding
+- **CSRF Protection:** CSRF tokens for state-changing operations
+- **Clickjacking Prevention:** X-Frame-Options header
+- **Security Headers:**
+  - Content-Security-Policy
+  - X-Content-Type-Options
+  - Strict-Transport-Security
+  - X-XSS-Protection
+
+#### 7.4.2 API Security
+**ID:** TR-SC-002  
+**Priority:** Critical
+
+- **HTTPS Only:** Enforce HTTPS for all API calls
+- **API Authentication:** JWT with short expiry
+- **Input Validation:** Validate all input parameters
+- **Output Encoding:** Encode all output data
+- **Rate Limiting:** Prevent API abuse
+- **CORS Configuration:** Whitelist allowed origins
+
+#### 7.4.3 File Upload Security
+**ID:** TR-SC-003  
+**Priority:** High
+
+- **File Type Validation:** Whitelist allowed file types
+- **File Size Limit:** Maximum 10MB per file
+- **Virus Scanning:** Scan uploaded files for malware
+- **Secure Storage:** Store files outside web root
+- **Access Control:** Authenticated access to uploaded files
+
+---
+
+## 8. Integration Requirements
+
+### 8.1 Payment Gateway Integration
+
+**ID:** INT-001  
+**Priority:** High
+
+**Supported Gateways:**
+- Razorpay (India)
+- Stripe (International)
+- PayPal (International)
+- [Local Payment Gateway]
+
+**Requirements:**
+- Support Credit/Debit cards, Net Banking, UPI, Wallets
+- PCI-DSS compliant integration (tokenization)
+- Webhook handling for payment status
+- Payment reconciliation
+- Refund processing
+- Test mode for development
+
+---
+
+### 8.2 SMS Gateway Integration
+
+**ID:** INT-002  
+**Priority:** High
+
+**Supported Gateways:**
+- Twilio
+- MSG91
+- AWS SNS
+- [Local SMS Gateway]
+
+**Requirements:**
+- Send transactional SMS (OTP, alerts)
+- Send promotional SMS (optional)
+- Delivery status tracking
+- SMS credit management
+- Template management (for DLT compliance in India)
+
+---
+
+### 8.3 Email Service Integration
+
+**ID:** INT-003  
+**Priority:** High
+
+**Supported Services:**
+- SendGrid
+- AWS SES
+- Mailgun
+- SMTP (custom)
+
+**Requirements:**
+- Transactional emails (password reset, receipts)
+- Bulk emails (announcements, newsletters)
+- Email templates (HTML + plain text)
+- Delivery tracking
+- Bounce handling
+- Unsubscribe management
+
+---
+
+### 8.4 Biometric Device Integration
+
+**ID:** INT-004  
+**Priority:** Medium (Optional)
+
+**Requirements:**
+- Support standard biometric devices (fingerprint, face recognition)
+- SOAP/REST API integration
+- Real-time attendance sync
+- Error handling for device failures
+- Offline data sync
+
+---
+
+### 8.5 Accounting Software Integration
+
+**ID:** INT-005  
+**Priority:** Low (Optional)
+
+**Supported Software:**
+- Tally
+- QuickBooks
+- Zoho Books
+
+**Requirements:**
+- Export financial data
+- Chart of accounts mapping
+- Invoice sync
+- Payment sync
+
+---
+
+### 8.6 Government Portal Integration
+
+**ID:** INT-006  
+**Priority:** Medium
+
+**Requirements:**
+- UDISE+ data export (India)
+- Student enrollment reporting
+- Staff details reporting
+- Infrastructure reporting
+- Exam results reporting
+
+---
+
+## 9. Security & Compliance
+
+### 9.1 Data Privacy
+
+#### 9.1.1 Personal Data Protection
+**ID:** SEC-DP-001  
+**Priority:** Critical
+
+- Collect minimum necessary personal data
+- Obtain consent for data collection (especially for minors)
+- Right to access personal data
+- Right to rectification
+- Right to erasure (data deletion)
+- Data portability
+- Privacy policy (clear and accessible)
+
+#### 9.1.2 Children's Data Protection
+**ID:** SEC-DP-002  
+**Priority:** Critical
+
+- Parental consent for children under 13 (COPPA compliance)
+- Extra protection for children's data
+- Age verification mechanism
+- No targeted advertising to children
+
+#### 9.1.3 Data Retention
+**ID:** SEC-DP-003  
+**Priority:** High
+
+- Define data retention periods per data type
+- Automatic data deletion after retention period
+- Archival for legally required data
+- Data anonymization for analytics
+
+---
+
+### 9.2 Financial Compliance
+
+#### 9.2.1 Payment Processing
+**ID:** SEC-FN-001  
+**Priority:** Critical
+
+- PCI-DSS compliance (never store card details)
+- Tokenization for saved payment methods
+- 3D Secure authentication (for cards)
+- Transaction logs (immutable)
+- Reconciliation process
+
+#### 9.2.2 Taxation
+**ID:** SEC-FN-002  
+**Priority:** High
+
+- GST compliance (India) / VAT compliance
+- TDS calculation and deduction
+- Tax invoicing
+- Tax reports (GSTR, TDS returns)
+
+#### 9.2.3 Audit Trail
+**ID:** SEC-FN-003  
+**Priority:** Critical
+
+- Complete audit trail for all financial transactions
+- Immutable logs (cannot be edited/deleted)
+- Timestamp and user tracking
+- Retention: Minimum 7 years
+
+---
+
+### 9.3 Academic Compliance
+
+#### 9.3.1 Board Affiliation
+**ID:** SEC-AC-001  
+**Priority:** High
+
+- Maintain board affiliation details
+- Compliance with board requirements
+- Curriculum implementation
+- Assessment guidelines
+- Teacher qualifications
+
+#### 9.3.2 Government Regulations
+**ID:** SEC-AC-002  
+**Priority:** High
+
+- RTE (Right to Education) compliance
+- Child safety regulations
+- Infrastructure standards
+- Teacher-student ratio
+- Working hours regulations
+
+---
+
+## 10. Data Requirements
+
+### 10.1 Data Model Overview
+
+#### 10.1.1 Core Entities
+
+**Users:**
+- id, tenant_id, role, email, password_hash, name, phone, status, created_at, updated_at
+
+**Students:**
+- id, tenant_id, user_id, admission_number, roll_number, class_id, section_id, admission_date, dob, gender, blood_group, address, guardian_id, photo_url, status
+
+**Faculty:**
+- id, tenant_id, user_id, employee_id, department_id, join_date, qualification, experience, subjects, salary_structure_id, photo_url, status
+
+**Classes:**
+- id, tenant_id, class_name, sections, class_teacher_id, capacity, academic_year_id
+
+**Subjects:**
+- id, tenant_id, subject_name, subject_code, type, class_ids
+
+**Attendance:**
+- id, tenant_id, user_id, date, status (present/absent/late/half-day), marked_by, remarks
+
+**Exams:**
+- id, tenant_id, exam_name, exam_type, academic_year_id, start_date, end_date, classes
+
+**Marks:**
+- id, tenant_id, exam_id, student_id, subject_id, marks_obtained, max_marks, grade, remarks
+
+**Fees:**
+- id, tenant_id, student_id, academic_year_id, fee_structure_id, total_amount, paid_amount, due_amount, status
+
+**Transactions:**
+- id, tenant_id, student_id, transaction_date, amount, payment_mode, receipt_number, status
+
+(Full ERD to be created in detailed design phase)
+
+---
+
+### 10.2 Data Migration
+
+**ID:** DATA-MIG-001  
+**Priority:** High
+
+**Requirements:**
+- Support data import from Excel/CSV
+- Data validation before import
+- Error reporting for failed imports
+- Rollback capability
+- Migration from legacy systems (if applicable)
+
+---
+
+### 10.3 Data Export
+
+**ID:** DATA-EXP-001  
+**Priority:** Medium
+
+**Requirements:**
+- Export data to Excel/CSV/PDF
+- Export entire database (for data portability)
+- Scheduled exports (automated backups)
+- Secure export (encrypted files for sensitive data)
+
+---
+
+## 11. UI/UX Requirements
+
+### 11.1 Design Principles
+
+**ID:** UI-001  
+**Priority:** High
+
+- **Clean & Modern:** Contemporary design aesthetic
+- **Intuitive Navigation:** Clear information architecture
+- **Consistency:** Uniform design patterns across modules
+- **Mobile-first:** Responsive design for all screen sizes
+- **Accessibility:** WCAG 2.1 Level AA compliance
+- **Performance:** Fast loading, minimal animations
+
+---
+
+### 11.2 Branding & Customization
+
+**ID:** UI-002  
+**Priority:** Medium
+
+**Per-tenant Customization:**
+- Upload school logo
+- Choose primary and secondary colors
+- Customize email templates
+- Customize SMS templates
+- Custom domain (optional, for enterprise plans)
+
+---
+
+### 11.3 User Onboarding
+
+**ID:** UI-003  
+**Priority:** Medium
+
+- **Welcome Tour:** Guided tour for first-time users
+- **Interactive Tutorials:** Step-by-step guides
+- **Contextual Help:** Tooltips and help icons
+- **Video Guides:** Role-wise video tutorials
+
+---
+
+## 12. Mobile Application Requirements
+
+### 12.1 Platform Support
+
+**ID:** MOB-001  
+**Priority:** High
+
+- iOS 13.0+
+- Android 8.0 (Oreo)+
+- Tablets: iPad OS 13+, Android tablets
+
+---
+
+### 12.2 Mobile App Features
+
+**ID:** MOB-002  
+**Priority:** High
+
+**All user roles should have mobile apps with:**
+- Role-specific dashboards
+- Core functionalities (attendance, assignments, fees, etc.)
+- Push notifications
+- Offline mode (cached data viewing)
+- Biometric login (fingerprint, face ID)
+- Camera integration (document upload, QR scanning)
+- In-app messaging
+
+---
+
+### 12.3 Mobile Performance
+
+**ID:** MOB-003  
+**Priority:** High
+
+- App size: < 50MB (initial download)
+- Launch time: < 3 seconds
+- Smooth 60fps UI
+- Battery efficient
+- Low data consumption mode
+
+---
+
+### 12.4 Mobile-Specific Features
+
+**ID:** MOB-004  
+**Priority:** Medium
+
+- **Push Notifications:** Real-time alerts
+- **Offline Mode:** View cached data, sync when online
+- **QR Code Scanner:** For attendance, library, payments
+- **Live GPS Tracking:** For school bus tracking
+- **Voice Input:** For quick notes, messages
+- **Widgets:** Home screen widgets for quick info
+
+---
+
+## 13. Deployment & Infrastructure
+
+### 13.1 Hosting Requirements
+
+**ID:** INFRA-001  
+**Priority:** Critical
+
+**Production Environment:**
+- Cloud hosting (AWS/Azure/GCP)
+- Auto-scaling based on load
+- Load balancer for high availability
+- CDN for static assets
+- Geographic redundancy (multi-region deployment)
+
+**Environments:**
+- Development
+- Staging (pre-production)
+- Production
+
+---
+
+### 13.2 Capacity Planning
+
+**ID:** INFRA-002  
+**Priority:** High
+
+**Initial Capacity (Year 1):**
+- Support 100 schools
+- 50,000 students
+- 10,000 faculty
+- 100,000 parents
+- 10,000 concurrent users
+- 1TB storage
+
+**Scaling Plan:**
+- 2x capacity by Year 2
+- 5x capacity by Year 3
+
+---
+
+### 13.3 CI/CD Pipeline
+
+**ID:** INFRA-003  
+**Priority:** High
+
+- Automated testing (unit, integration, E2E)
+- Code quality checks (linting, static analysis)
+- Automated deployment to staging
+- Manual approval for production deployment
+- Rollback capability
+- Environment parity (dev ≈ staging ≈ production)
+
+---
+
+### 13.4 Monitoring & Alerts
+
+**ID:** INFRA-004  
+**Priority:** High
+
+- Application performance monitoring (APM)
+- Infrastructure monitoring (CPU, memory, disk, network)
+- Error tracking and alerting
+- Uptime monitoring (external service)
+- Real-time dashboards
+- Automated alerts (Slack, Email, SMS)
+
+---
+
+## 14. Testing Requirements
+
+### 14.1 Testing Types
+
+**ID:** TEST-001  
+**Priority:** High
+
+**Required Testing:**
+1. **Unit Testing:** Minimum 70% code coverage
+2. **Integration Testing:** API testing, database testing
+3. **Functional Testing:** Feature-wise testing
+4. **UI/UX Testing:** Cross-browser, cross-device testing
+5. **Performance Testing:** Load testing, stress testing
+6. **Security Testing:** Penetration testing, vulnerability scanning
+7. **User Acceptance Testing (UAT):** With pilot schools
+8. **Regression Testing:** Automated regression suite
+9. **Mobile App Testing:** iOS and Android devices
+
+---
+
+### 14.2 Test Environment
+
+**ID:** TEST-002  
+**Priority:** High
+
+- Dedicated testing environment (mirror of production)
+- Test data generation tools
+- Automated testing frameworks
+- Test reporting and tracking
+
+---
+
+## 15. Documentation Requirements
+
+### 15.1 Technical Documentation
+
+**ID:** DOC-001  
+**Priority:** High
+
+- System Architecture Document
+- Database Schema (ERD)
+- API Documentation (OpenAPI spec)
+- Deployment Guide
+- Security Documentation
+- Integration Guides
+
+---
+
+### 15.2 User Documentation
+
+**ID:** DOC-002  
+**Priority:** High
+
+- User Manuals (per role)
+- Administrator Guide
+- FAQ Document
+- Video Tutorials
+- Release Notes
+- Troubleshooting Guide
+
+---
+
+### 15.3 Code Documentation
+
+**ID:** DOC-003  
+**Priority:** Medium
+
+- Inline code comments
+- README files
+- Changelog
+- Contributing Guidelines (for future development)
+
+---
+
+## 16. Project Constraints
+
+### 16.1 Technical Constraints
+
+- Must use modern web technologies (no legacy tech)
+- Must be cloud-hosted (no on-premise initially)
+- Must support multi-tenancy from day one
+- Must be mobile-friendly (responsive web + native apps)
+
+---
+
+### 16.2 Regulatory Constraints
+
+- Must comply with local data protection laws
+- Must comply with payment regulations
+- Must comply with educational board requirements
+- Must comply with child safety regulations
+
+---
+
+### 16.3 Business Constraints
+
+- Initial target: [Country/Region]
+- Budget: [To be defined]
+- Timeline: [To be defined]
+- Team size: [To be defined]
+
+---
+
+## 17. Assumptions & Dependencies
+
+### 17.1 Assumptions
+
+1. Schools have stable internet connectivity
+2. Users have basic digital literacy
+3. Schools will provide accurate data during onboarding
+4. Payment gateway services will be available 24/7
+5. SMS gateway will have reliable delivery rates
+
+---
+
+### 17.2 Dependencies
+
+1. **Third-party Services:**
+   - Payment gateway availability
+   - SMS gateway availability
+   - Email service availability
+   - Cloud infrastructure availability
+
+2. **Regulatory Approvals:**
+   - Data protection compliance approval
+   - Payment processing license (if required)
+
+3. **Stakeholder Availability:**
+   - School administrators for UAT
+   - Early adopter schools for pilot
+
+---
+
+## 18. Success Criteria
+
+### 18.1 Functional Success
+
+- All core modules (Student, Academic, Fee, Attendance, Exam) fully functional
+- 90%+ feature completion as per requirements
+- Pass all UAT test cases
+
+---
+
+### 18.2 Technical Success
+
+- System uptime: 99.9%
+- Page load time: < 3 seconds
+- API response time: < 500ms
+- Mobile app rating: 4+ stars
+- Zero critical security vulnerabilities
+
+---
+
+### 18.3 Business Success
+
+- Onboard 50+ schools in first year
+- Achieve 10,000+ active students
+- User satisfaction score: 4.5+ out of 5
+- Customer retention rate: 90%+
+- Revenue target: [To be defined]
+
+---
+
+### 18.4 User Adoption
+
+- 80%+ user login rate within first month
+- 90%+ feature utilization by end of 3 months
+- Less than 10% support ticket rate per active user
+- Positive feedback from 80%+ users
+
+---
+
+## 19. Appendix
+
+### 19.1 Glossary
+
+**Terms & Definitions:**
+
+- **Academic Year:** The yearly period for academic activities (e.g., April 2024 - March 2025)
+- **Attendance Percentage:** (Days Present / Total Working Days) × 100
+- **Class:** A grade level in school (e.g., 1st Grade, 2nd Grade)
+- **Section:** A division within a class (e.g., Class 5A, Class 5B)
+- **Co-curricular Activities:** Activities outside regular curriculum (sports, music, art)
+- **Defaulter:** Student with overdue fee payment
+- **ERP:** Enterprise Resource Planning
+- **Faculty:** Teaching staff (teachers, professors)
+- **Fee Head:** Category of fee (e.g., Tuition Fee, Transport Fee)
+- **Guardian:** Parent or legal guardian of student
+- **Hall Ticket:** Admit card for examinations
+- **LMS:** Learning Management System
+- **Multi-tenancy:** Single application instance serving multiple schools (tenants)
+- **Parent Portal:** Web/mobile interface for parents
+- **Pass Percentage:** (Students Passed / Total Students) × 100
+- **PTM:** Parent-Teacher Meeting
+- **RBAC:** Role-Based Access Control
+- **Report Card:** Document showing student's exam performance
+- **Roll Number:** Unique identifier for student in a class
+- **SaaS:** Software as a Service
+- **SIS:** Student Information System
+- **Subject:** Course or discipline taught (e.g., Mathematics, Science)
+- **Syllabus:** Course content outline
+- **TC:** Transfer Certificate
+- **Tenant:** A school using the SaaS platform
+- **Term:** Academic period within a year (e.g., Term 1, Term 2)
+- **Timetable:** Schedule of classes and periods
+- **Topper:** Student with highest marks
+- **UAT:** User Acceptance Testing
+
+---
+
+### 19.2 Acronyms
+
+- **API:** Application Programming Interface
+- **AWS:** Amazon Web Services
+- **CDN:** Content Delivery Network
+- **COPPA:** Children's Online Privacy Protection Act
+- **CRUD:** Create, Read, Update, Delete
+- **CSV:** Comma-Separated Values
+- **ETA:** Estimated Time of Arrival
+- **GDPR:** General Data Protection Regulation
+- **GPS:** Global Positioning System
+- **HTML:** HyperText Markup Language
+- **HTTP:** HyperText Transfer Protocol
+- **HTTPS:** HTTP Secure
+- **ISO:** International Organization for Standardization
+- **JWT:** JSON Web Token
+- **KPI:** Key Performance Indicator
+- **MFA:** Multi-Factor Authentication
+- **ORM:** Object-Relational Mapping
+- **OTP:** One-Time Password
+- **PCI-DSS:** Payment Card Industry Data Security Standard
+- **PDF:** Portable Document Format
+- **REST:** Representational State Transfer
+- **RPO:** Recovery Point Objective
+- **RSVP:** Répondez s'il vous plaît (Please respond)
+- **RTO:** Recovery Time Objective
+- **SMS:** Short Message Service
+- **SMTP:** Simple Mail Transfer Protocol
+- **SOC:** Service Organization Control
+- **SQL:** Structured Query Language
+- **SSL:** Secure Sockets Layer
+- **TDS:** Tax Deducted at Source
+- **TLS:** Transport Layer Security
+- **UI:** User Interface
+- **UPI:** Unified Payments Interface
+- **URL:** Uniform Resource Locator
+- **UX:** User Experience
+- **WCAG:** Web Content Accessibility Guidelines
+- **XSS:** Cross-Site Scripting
+
+---
+
+### 19.3 Reference Documents
+
+1. **Industry Standards:**
+   - WCAG 2.1 Accessibility Guidelines
+   - PCI-DSS Security Standards
+   - GDPR Compliance Guidelines
+   - ISO/IEC 27001 (Information Security)
+
+2. **Educational Regulations:**
+   - Right to Education Act (India)
+   - CBSE/ICSE/State Board Guidelines
+   - UDISE+ Data Collection Formats
+   - Child Safety & Protection Policies
+
+3. **Technical References:**
+   - REST API Design Best Practices
+   - Multi-tenancy Architecture Patterns
+   - Database Design Principles
+   - OAuth 2.0 & JWT Standards
+
+---
+
+### 19.4 Contact Information
+
+**Project Stakeholders:**
+
+| Role | Name | Email | Phone |
+|------|------|-------|-------|
+| Product Owner | [Name] | [Email] | [Phone] |
+| Project Manager | [Name] | [Email] | [Phone] |
+| Technical Lead | [Name] | [Email] | [Phone] |
+| UI/UX Lead | [Name] | [Email] | [Phone] |
+| QA Lead | [Name] | [Email] | [Phone] |
+
+---
+
+### 19.5 Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-10-24 | [Author] | Initial draft - Complete requirements specification |
+| | | | |
+| | | | |
+
+---
+
+### 19.6 Approval Signatures
+
+**Document Approved By:**
+
+| Role | Name | Signature | Date |
+|------|------|-----------|------|
+| Product Owner | | | |
+| Technical Lead | | | |
+| Business Analyst | | | |
+| Project Manager | | | |
+
+---
+
+## 20. Development Phases & Roadmap
+
+### 20.1 Phase 1: MVP (Minimum Viable Product) - 6 Months
+
+**Priority:** Critical Features Only
+
+**Modules to Implement:**
+1. ✅ User Management (Admin, Faculty, Student, Parent - basic profiles)
+2. ✅ Authentication & Authorization
+3. ✅ Academic Management (Classes, Subjects, Timetable - basic)
+4. ✅ Student Attendance (Mark & View)
+5. ✅ Examination & Results (Create exams, Enter marks, Generate report cards)
+6. ✅ Fee Management (Fee structure, Collection, Receipts)
+7. ✅ Communication (Messages, Announcements, Basic notifications via Email)
+8. ✅ Basic Reports (Attendance, Fee collection, Results)
+9. ✅ Admin Dashboard (Basic KPIs)
+10. ✅ Student/Parent Portal (View-only features)
+
+**Technical Deliverables:**
+- Web Application (Responsive design)
+- REST API
+- Database setup
+- Basic mobile-responsive web views (no native apps yet)
+- Single payment gateway integration (Razorpay)
+- Email integration (SendGrid)
+- Hosting on AWS/Azure
+
+**Success Criteria:**
+- 5 pilot schools onboarded
+- 2,000+ active users
+- Core workflows functional
+- 95%+ uptime
+
+---
+
+### 20.2 Phase 2: Enhanced Features - 4 Months
+
+**Priority:** High Priority Features
+
+**Modules to Implement:**
+1. ✅ Faculty Attendance & Leave Management
+2. ✅ Payroll & Salary Management (Basic)
+3. ✅ Library Management
+4. ✅ Assignments & Homework Management
+5. ✅ SMS Integration (Twilio)
+6. ✅ Advanced Reports & Analytics
+7. ✅ Bulk Operations (Import students, faculty via CSV)
+8. ✅ Enhanced Dashboards (Faculty, Principal)
+9. ✅ Notification System (SMS + Email)
+10. ✅ Fee Defaulters Management
+
+**Technical Deliverables:**
+- Mobile Apps (iOS & Android - React Native/Flutter)
+- Push Notifications (Firebase)
+- Additional payment gateway (Stripe)
+- Biometric device integration (optional)
+- Performance optimization
+
+**Success Criteria:**
+- 25+ schools onboarded
+- 10,000+ active users
+- Mobile app launched (App Store & Play Store)
+- 4+ star rating on app stores
+
+---
+
+### 20.3 Phase 3: Advanced Features - 4 Months
+
+**Priority:** Medium Priority Features
+
+**Modules to Implement:**
+1. ✅ Transport Management (with GPS tracking)
+2. ✅ Hostel Management (optional)
+3. ✅ Inventory & Asset Management
+4. ✅ Advanced Payroll (Loan, Advance, Tax calculations)
+5. ✅ Online Classes Integration (Zoom, Google Meet)
+6. ✅ Advanced Analytics & Predictive Insights
+7. ✅ Custom Report Builder
+8. ✅ Parent-Teacher Meeting Scheduler
+9. ✅ Alumni Management (optional)
+10. ✅ Multi-language Support
+
+**Technical Deliverables:**
+- Advanced analytics engine
+- AI/ML integration (predictive analytics)
+- Video conferencing integration
+- Enhanced mobile features
+- Tablet-optimized UI
+
+**Success Criteria:**
+- 50+ schools onboarded
+- 25,000+ active users
+- Advanced features adopted by 60%+ schools
+
+---
+
+### 20.4 Phase 4: Enterprise Features - 3 Months
+
+**Priority:** Low Priority / Enterprise Features
+
+**Modules to Implement:**
+1. ✅ Multi-branch Management (School chains)
+2. ✅ Advanced Security (SSO, MFA)
+3. ✅ Custom Integrations (Accounting software)
+4. ✅ White-label Solution (Custom domain, branding)
+5. ✅ API Marketplace (Third-party integrations)
+6. ✅ Advanced Compliance Tools
+7. ✅ Data Analytics Dashboard (Board-level)
+8. ✅ Automated Workflows & Approvals
+9. ✅ Document Management System
+10. ✅ Chatbot Support (AI-powered)
+
+**Technical Deliverables:**
+- Microservices architecture (for scalability)
+- GraphQL API (in addition to REST)
+- Advanced caching strategies
+- SOC 2 Type II compliance
+- ISO 27001 certification
+
+**Success Criteria:**
+- 100+ schools onboarded
+- 50,000+ active users
+- Enterprise clients acquired
+- Profitability achieved
+
+---
+
+### 20.5 Ongoing: Maintenance & Enhancements
+
+**Continuous Activities:**
+- Bug fixes & performance optimization
+- Security patches & updates
+- Feature enhancements based on user feedback
+- Platform stability & reliability
+- Customer support
+- Documentation updates
+- Compliance updates (regulatory changes)
+
+---
+
+## 21. Pricing & Subscription Model
+
+### 21.1 Subscription Tiers
+
+#### **Basic Plan** - ₹5,000/month (or $60/month)
+**Suitable for:** Small schools (up to 500 students)
+
+**Includes:**
+- Student, Faculty, Parent user accounts
+- Attendance Management
+- Basic Academic Management
+- Fee Management (Online payment gateway charges extra)
+- Basic Reports
+- Email Notifications
+- Web Application access
+- Email Support
+
+**Limitations:**
+- No SMS notifications
+- No mobile app
+- Basic support (48-hour response time)
+- 10GB storage
+
+---
+
+#### **Standard Plan** - ₹15,000/month (or $180/month)
+**Suitable for:** Medium schools (500-1500 students)
+
+**Includes:**
+- Everything in Basic Plan
+- SMS Notifications (1000 SMS/month included)
+- Mobile Apps (iOS & Android)
+- Examination & Results Management
+- Library Management
+- Assignments & Homework
+- Advanced Reports & Analytics
+- Priority Email Support (24-hour response time)
+- 50GB storage
+
+---
+
+#### **Premium Plan** - ₹30,000/month (or $360/month)
+**Suitable for:** Large schools (1500-3000 students)
+
+**Includes:**
+- Everything in Standard Plan
+- Payroll & Salary Management
+- Transport Management (with GPS tracking)
+- Hostel Management (optional)
+- SMS Notifications (5000 SMS/month included)
+- Custom Report Builder
+- Biometric Integration
+- Dedicated Account Manager
+- Phone Support (12-hour response time)
+- 200GB storage
+- WhatsApp Notifications (optional add-on)
+
+---
+
+#### **Enterprise Plan** - Custom Pricing
+**Suitable for:** Very large schools or school chains (3000+ students)
+
+**Includes:**
+- Everything in Premium Plan
+- Multi-branch Management
+- Unlimited SMS
+- White-label Solution (Custom branding, domain)
+- Advanced Integrations (Accounting, ERP)
+- SSO & Advanced Security
+- 24/7 Priority Support
+- Custom Features Development
+- Dedicated Server (optional)
+- Unlimited Storage
+- SLA with 99.99% uptime guarantee
+
+---
+
+### 21.2 Add-ons (Optional)
+
+| Add-on | Price (Monthly) | Description |
+|--------|----------------|-------------|
+| Additional SMS Pack | ₹500 per 1000 SMS | Extra SMS beyond plan limit |
+| Extra Storage | ₹1000 per 100GB | Additional cloud storage |
+| Biometric Integration | ₹5,000 one-time + ₹500/month | Device integration & maintenance |
+| Custom Domain | ₹2,000/year | yourschool.com instead of yourschool.schoolerp.com |
+| Dedicated Support | ₹10,000/month | Dedicated support executive |
+| Training Sessions | ₹5,000 per session | On-site or online training |
+| Data Migration | ₹15,000 one-time | Migrate from legacy system |
+
+---
+
+### 21.3 Payment Terms
+
+- **Billing Cycle:** Monthly or Annual (10% discount on annual)
+- **Payment Methods:** Credit/Debit Card, Bank Transfer, UPI
+- **Free Trial:** 30 days (full-featured trial)
+- **Setup Fee:** Waived for first 100 schools
+- **Contract:** No long-term commitment (monthly plans), 1-year minimum for enterprise
+- **Refund Policy:** 7-day money-back guarantee
+- **Payment Gateway Charges:** 2-3% (borne by school or passed to parents)
+
+---
+
+## 22. Risk Assessment & Mitigation
+
+### 22.1 Technical Risks
+
+#### **Risk 1: System Downtime**
+- **Impact:** High
+- **Probability:** Medium
+- **Mitigation:**
+  - Implement high availability architecture
+  - Automated failover mechanisms
+  - Regular disaster recovery drills
+  - 99.9% uptime SLA with hosting provider
+
+#### **Risk 2: Data Breach**
+- **Impact:** Critical
+- **Probability:** Low
+- **Mitigation:**
+  - Implement robust security measures (encryption, MFA)
+  - Regular security audits & penetration testing
+  - Employee security training
+  - Cyber insurance
+
+#### **Risk 3: Performance Degradation**
+- **Impact:** High
+- **Probability:** Medium
+- **Mitigation:**
+  - Performance testing & optimization
+  - Auto-scaling infrastructure
+  - Database query optimization
+  - CDN for static assets
+
+#### **Risk 4: Third-party Service Failure**
+- **Impact:** High
+- **Probability:** Low
+- **Mitigation:**
+  - Multiple payment gateway options
+  - SMS gateway redundancy
+  - Graceful degradation (fallback mechanisms)
+  - SLA with critical vendors
+
+---
+
+### 22.2 Business Risks
+
+#### **Risk 1: Low User Adoption**
+- **Impact:** Critical
+- **Probability:** Medium
+- **Mitigation:**
+  - Comprehensive training programs
+  - Intuitive UI/UX design
+  - Dedicated onboarding support
+  - In-app tutorials & help
+
+#### **Risk 2: Competition**
+- **Impact:** High
+- **Probability:** High
+- **Mitigation:**
+  - Continuous innovation
+  - Excellent customer support
+  - Competitive pricing
+  - Unique features (live bus tracking, AI analytics)
+
+#### **Risk 3: Regulatory Changes**
+- **Impact:** Medium
+- **Probability:** Medium
+- **Mitigation:**
+  - Monitor regulatory landscape
+  - Flexible architecture (easy to adapt)
+  - Legal counsel on retainer
+  - Compliance team
+
+#### **Risk 4: Cash Flow Issues**
+- **Impact:** High
+- **Probability:** Low
+- **Mitigation:**
+  - Adequate funding/runway
+  - Freemium to paid conversion strategy
+  - Annual billing discounts (improve cash flow)
+  - Multiple revenue streams
+
+---
+
+### 22.3 Operational Risks
+
+#### **Risk 1: Data Migration Failures**
+- **Impact:** High
+- **Probability:** Medium
+- **Mitigation:**
+  - Thorough data validation
+  - Pilot migrations (test with sample data)
+  - Rollback capability
+  - Dedicated migration team
+
+#### **Risk 2: Customer Support Overload**
+- **Impact:** Medium
+- **Probability:** Medium
+- **Mitigation:**
+  - Scalable support team
+  - Self-service knowledge base
+  - AI chatbot for common queries
+  - Tiered support model
+
+#### **Risk 3: Vendor Lock-in**
+- **Impact:** Medium
+- **Probability:** Low
+- **Mitigation:**
+  - Use open standards
+  - Avoid proprietary technologies
+  - Data export capabilities
+  - Cloud-agnostic architecture (where possible)
+
+---
+
+## 23. Support & Maintenance Plan
+
+### 23.1 Customer Support
+
+**Support Channels:**
+1. **Email Support:** support@schoolerp.com (All plans)
+2. **Phone Support:** Premium & Enterprise plans
+3. **Live Chat:** Standard, Premium & Enterprise plans
+4. **Ticketing System:** All plans
+5. **Knowledge Base:** Self-service articles, FAQs
+6. **Video Tutorials:** YouTube channel
+
+**Support Hours:**
+- Basic Plan: Business hours (9 AM - 6 PM, Mon-Fri)
+- Standard Plan: Extended hours (8 AM - 8 PM, Mon-Sat)
+- Premium Plan: 12 hours/day, 6 days/week
+- Enterprise Plan: 24/7 support
+
+**Response Times (SLA):**
+- Basic: 48 hours
+- Standard: 24 hours
+- Premium: 12 hours
+- Enterprise: 4 hours (Critical), 8 hours (High), 24 hours (Medium)
+
+---
+
+### 23.2 Maintenance Schedule
+
+**Planned Maintenance:**
+- **Frequency:** Monthly (2nd Sunday of every month)
+- **Duration:** Maximum 4 hours (2 AM - 6 AM local time)
+- **Advance Notice:** 7 days via email + in-app notification
+
+**Emergency Maintenance:**
+- As needed (security patches, critical bugs)
+- Immediate notification to affected schools
+
+---
+
+### 23.3 Updates & Releases
+
+**Release Cycle:**
+- **Major Releases:** Quarterly (new features)
+- **Minor Releases:** Monthly (enhancements, bug fixes)
+- **Patches:** As needed (critical bug fixes, security patches)
+
+**Communication:**
+- Release notes published before each release
+- Email notification to all admins
+- In-app changelog
+
+---
+
+### 23.4 Training & Onboarding
+
+**Included Training:**
+- **Basic Plan:** Video tutorials
+- **Standard Plan:** 2 online training sessions (2 hours each)
+- **Premium Plan:** 4 online training sessions + 1 on-site visit
+- **Enterprise Plan:** Unlimited training sessions (online + on-site)
+
+**Training Topics:**
+- System overview & navigation
+- User management & role configuration
+- Academic management (timetable, exams)
+- Fee collection & reporting
+- Communication tools
+- Report generation
+
+**Additional Training:** Available as add-on (₹5,000 per session)
+
+---
+
+## 24. Legal & Contractual
+
+### 24.1 Terms of Service
+
+**Key Terms:**
+- Service provided on "as-is" basis
+- Customer responsible for data accuracy
+- Intellectual property rights remain with [Company Name]
+- Termination clause (30 days notice)
+- Dispute resolution (arbitration)
+- Governing law: [Country/State]
+
+---
+
+### 24.2 Service Level Agreement (SLA)
+
+**Uptime Guarantee:**
+- Basic/Standard: 99.5% (43.8 hours downtime/year)
+- Premium: 99.9% (8.76 hours downtime/year)
+- Enterprise: 99.99% (52 minutes downtime/year)
+
+**Credits for Downtime:**
+- < 99%: 10% monthly fee credit
+- < 98%: 25% monthly fee credit
+- < 95%: 50% monthly fee credit
+
+**Exclusions:** Scheduled maintenance, Force majeure, Customer-caused issues
+
+---
+
+### 24.3 Data Ownership & Privacy
+
+- **Data Ownership:** Customer owns all their data
+- **Data Portability:** Export data anytime
+- **Data Deletion:** Upon termination, data deleted after 90 days (unless retention required by law)
+- **Privacy Policy:** Transparent privacy practices
+- **Data Processing Agreement:** Signed with each customer
+
+---
+
+### 24.4 Intellectual Property
+
+- **Software IP:** Owned by [Company Name]
+- **Customer Data:** Owned by customer
+- **Customizations:** Owned by [Company Name] (unless custom contract)
+- **Feedback:** Customer feedback can be used for product improvement
+
+---
+
+## 25. Future Enhancements (Backlog)
+
+### 25.1 AI/ML Features (Future)
+
+1. **Predictive Analytics:**
+   - Predict student performance (at-risk students)
+   - Predict student dropouts
+   - Enrollment forecasting
+
+2. **Smart Recommendations:**
+   - Personalized learning paths
+   - Career guidance recommendations
+   - Teacher-student matching optimization
+
+3. **Automated Grading:**
+   - Auto-grade objective questions
+   - AI-assisted essay evaluation
+
+4. **Chatbot:**
+   - AI-powered support chatbot
+   - Student query resolution
+   - Parent FAQ assistant
+
+---
+
+### 25.2 Gamification
+
+- Student achievement badges
+- Leaderboards (class-wise, subject-wise)
+- Reward points system
+- Progress visualization (XP levels)
+
+---
+
+### 25.3 Blockchain (Future)
+
+- Immutable academic records
+- Digital certificates (tamper-proof)
+- Transfer certificate verification
+
+---
+
+### 25.4 IoT Integration (Future)
+
+- Smart classroom monitoring (temperature, air quality)
+- Automated attendance via face recognition
+- Smart library (RFID-based book tracking)
+- Energy management (smart meters)
+
+---
+
+### 25.5 Virtual/Augmented Reality (Future)
+
+- Virtual labs (science experiments)
+- Virtual field trips
+- 3D learning content
+- AR textbooks
+
+---
+
+## 26. Success Metrics & KPIs
+
+### 26.1 Product Metrics
+
+| Metric | Target (Year 1) | Target (Year 2) | Target (Year 3) |
+|--------|----------------|----------------|----------------|
+| Active Schools | 50 | 200 | 500 |
+| Total Students | 25,000 | 100,000 | 250,000 |
+| Total Users | 60,000 | 250,000 | 600,000 |
+| Daily Active Users | 30,000 | 125,000 | 300,000 |
+| Mobile App Downloads | 20,000 | 100,000 | 300,000 |
+| App Rating (iOS/Android) | 4.0+ | 4.3+ | 4.5+ |
+
+---
+
+### 26.2 Business Metrics
+
+| Metric | Target (Year 1) | Target (Year 2) | Target (Year 3) |
+|--------|----------------|----------------|----------------|
+| Monthly Recurring Revenue (MRR) | ₹40 lakhs | ₹2 crores | ₹6 crores |
+| Annual Recurring Revenue (ARR) | ₹5 crores | ₹25 crores | ₹75 crores |
+| Customer Acquisition Cost (CAC) | ₹50,000 | ₹40,000 | ₹30,000 |
+| Customer Lifetime Value (LTV) | ₹5 lakhs | ₹8 lakhs | ₹12 lakhs |
+| Churn Rate (Monthly) | < 5% | < 3% | < 2% |
+| Net Promoter Score (NPS) | 40+ | 50+ | 60+ |
+
+---
+
+### 26.3 Technical Metrics
+
+| Metric | Target |
+|--------|--------|
+| System Uptime | 99.9% |
+| Average Page Load Time | < 3 seconds |
+| Average API Response Time | < 500ms |
+| Mobile App Crash Rate | < 1% |
+| Bug Resolution Time (Critical) | < 24 hours |
+| Code Coverage (Unit Tests) | 70%+ |
+| Security Vulnerabilities (Critical) | 0 |
+
+---
+
+### 26.4 User Engagement Metrics
+
+| Metric | Target |
+|--------|--------|
+| User Login Rate (Monthly) | 80%+ |
+| Feature Adoption Rate | 70%+ |
+| Support Ticket Rate | < 10% of users |
+| Training Completion Rate | 85%+ |
+| User Satisfaction Score | 4.5/5 |
+
+---
+
+## 27. Conclusion
+
+This **School ERP SaaS Requirements Document** provides a comprehensive blueprint for developing a modern, scalable, and feature-rich school management system. The system aims to digitize and streamline all aspects of school operations, from academic management to financial operations, while ensuring data security, compliance, and exceptional user experience.
+
+### Key Highlights:
+
+✅ **Comprehensive Feature Set:** 17+ major modules covering all school operations  
+✅ **Multi-User Support:** 5 distinct user roles (Admin, Faculty, Student, Parent, Principal)  
+✅ **Cloud-Based SaaS:** Scalable, multi-tenant architecture  
+✅ **Mobile-First:** Native iOS & Android apps + responsive web  
+✅ **Secure & Compliant:** GDPR, PCI-DSS, data encryption, audit logs  
+✅ **Flexible Pricing:** 4 subscription tiers + add-ons  
+✅ **Phased Development:** MVP in 6 months, full platform in 17 months  
+✅ **Future-Ready:** AI/ML, IoT, Blockchain integration roadmap  
+
+### Next Steps:
+
+1. **Stakeholder Approval:** Review and sign-off on requirements
+2. **Technical Design:** Create detailed system architecture, database design (ERD), API specifications
+3. **UI/UX Design:** Wireframes, mockups, design system
+4. **Development Planning:** Sprint planning, resource allocation
+5. **Pilot School Selection:** Identify 5 schools for MVP testing
+6. **Development Kickoff:** Begin Phase 1 (MVP) development
+
+---
+
+**Document Status:** Ready for Review & Approval
+
+**Prepared By:** [Your Name/Team]  
+**Date:** October 24, 2025  
+**Version:** 1.0
+
+---
+
+**For queries or clarifications, please contact:**  
+Email: [project.email@company.com]  
+Phone: [Contact Number]
+
+---
+
+*This document is confidential and proprietary. Unauthorized distribution is prohibited.*
+
+---
+
+**END OF REQUIREMENTS DOCUMENT**
