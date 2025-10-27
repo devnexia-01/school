@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Transport() {
   const { user } = useAuth();
@@ -126,7 +127,7 @@ export default function Transport() {
                     <Input id="driverPhone" placeholder="+1-555-0000" data-testid="input-driver-phone" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fare">Monthly Fare ($)</Label>
+                    <Label htmlFor="fare">Monthly Fare (₹)</Label>
                     <Input id="fare" type="number" placeholder="50" data-testid="input-fare" />
                   </div>
                   <div className="space-y-2 col-span-2">
@@ -213,7 +214,7 @@ export default function Transport() {
                     {
                       key: 'fare',
                       header: 'Fare',
-                      cell: (item) => `$${item.fare}/month`,
+                      cell: (item) => `${formatCurrencyINR(item.fare)}/month`,
                     },
                     {
                       key: 'status',

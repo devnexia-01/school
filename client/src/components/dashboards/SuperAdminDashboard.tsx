@@ -4,13 +4,14 @@ import { StatCard } from '@/components/shared/StatCard';
 import { DataTable } from '@/components/shared/DataTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, DollarSign, TrendingUp, Plus } from 'lucide-react';
+import { Building2, Users, IndianRupee, TrendingUp, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export function SuperAdminDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -79,7 +80,7 @@ export function SuperAdminDashboard() {
     students: 0,
     plan: 'Standard',
     status: tenant.active ? 'active' : 'inactive',
-    revenue: '$0',
+    revenue: formatCurrencyINR(0),
   }));
 
   return (
@@ -185,8 +186,8 @@ export function SuperAdminDashboard() {
         />
         <StatCard
           title="MRR"
-          value="$42,850"
-          icon={DollarSign}
+          value={formatCurrencyINR(42850)}
+          icon={IndianRupee}
           trend={{ value: 15.3, label: 'vs last month', isPositive: true }}
           testId="stat-mrr"
         />

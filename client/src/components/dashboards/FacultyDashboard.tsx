@@ -4,6 +4,7 @@ import { Clock, ClipboardCheck, FileText, MessageSquare, Wallet, CalendarDays, B
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
 import { StatCard } from '@/components/shared/StatCard';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export function FacultyDashboard() {
   const todaysClasses = [
@@ -50,7 +51,7 @@ export function FacultyDashboard() {
         />
         <StatCard
           title="This Month Salary"
-          value="$4,800"
+          value={formatCurrencyINR(4800)}
           icon={Wallet}
         />
       </div>

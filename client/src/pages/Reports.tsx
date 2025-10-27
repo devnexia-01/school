@@ -3,11 +3,12 @@ import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, TrendingUp, Users, GraduationCap, DollarSign, BookOpen, ClipboardCheck } from 'lucide-react';
+import { Download, TrendingUp, Users, GraduationCap, IndianRupee, BookOpen, ClipboardCheck } from 'lucide-react';
 import { StatCard } from '@/components/shared/StatCard';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '@/lib/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Reports() {
   const { user } = useAuth();
@@ -98,7 +99,7 @@ export default function Reports() {
           <StatCard
             title="Fee Collection"
             value="95.8%"
-            icon={DollarSign}
+            icon={IndianRupee}
             trend={{ value: 4.3, label: 'vs last month', isPositive: true }}
           />
         </div>
@@ -307,8 +308,8 @@ export default function Reports() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="collected" fill="#10b981" name="Collected ($)" />
-                    <Bar dataKey="pending" fill="#ef4444" name="Pending ($)" />
+                    <Bar dataKey="collected" fill="#10b981" name="Collected (₹)" />
+                    <Bar dataKey="pending" fill="#ef4444" name="Pending (₹)" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -323,15 +324,15 @@ export default function Reports() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span>Total Revenue</span>
-                      <span className="font-bold text-green-600">$308,000</span>
+                      <span className="font-bold text-green-600">{formatCurrencyINR(308000)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Collected</span>
-                      <span className="font-bold">$295,200</span>
+                      <span className="font-bold">{formatCurrencyINR(295200)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Pending</span>
-                      <span className="font-bold text-orange-600">$12,800</span>
+                      <span className="font-bold text-orange-600">{formatCurrencyINR(12800)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -345,15 +346,15 @@ export default function Reports() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span>Salaries</span>
-                      <span className="font-bold">$180,000</span>
+                      <span className="font-bold">{formatCurrencyINR(180000)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Infrastructure</span>
-                      <span className="font-bold">$45,000</span>
+                      <span className="font-bold">{formatCurrencyINR(45000)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Utilities</span>
-                      <span className="font-bold">$18,000</span>
+                      <span className="font-bold">{formatCurrencyINR(18000)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -366,7 +367,7 @@ export default function Reports() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-green-600">$65,200</p>
+                      <p className="text-4xl font-bold text-green-600">{formatCurrencyINR(65200)}</p>
                       <p className="text-sm text-muted-foreground mt-2">This Quarter</p>
                     </div>
                     <div className="flex items-center justify-center gap-2 text-sm">

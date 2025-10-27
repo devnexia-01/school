@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, DollarSign, Eye } from 'lucide-react';
+import { Plus, Download, IndianRupee, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp, Users, CreditCard } from 'lucide-react';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Payroll() {
   const { user } = useAuth();
@@ -89,7 +90,7 @@ export default function Payroll() {
   const handleProcessPayment = (record: any) => {
     toast({
       title: 'Payment Processed',
-      description: `Payment of $${record.netSalary} to ${record.employeeName} has been processed.`,
+      description: `Payment of ${formatCurrencyINR(record.netSalary)} to ${record.employeeName} has been processed.`,
     });
   };
 
@@ -178,18 +179,18 @@ export default function Payroll() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Total Payroll"
-            value={`$${totalPayroll.toLocaleString()}`}
-            icon={DollarSign}
+            value={formatCurrencyINR(totalPayroll)}
+            icon={IndianRupee}
             trend={{ value: 5.2, label: 'vs last month', isPositive: true }}
           />
           <StatCard
             title="Paid Amount"
-            value={`$${paidAmount.toLocaleString()}`}
+            value={formatCurrencyINR(paidAmount)}
             icon={CreditCard}
           />
           <StatCard
             title="Pending"
-            value={`$${pendingAmount.toLocaleString()}`}
+            value={formatCurrencyINR(pendingAmount)}
             icon={TrendingUp}
           />
           <StatCard
@@ -233,23 +234,23 @@ export default function Payroll() {
                 {
                   key: 'basicSalary',
                   header: 'Basic Salary',
-                  cell: (item) => `$${item.basicSalary.toLocaleString()}`,
+                  cell: (item) => formatCurrencyINR(item.basicSalary),
                 },
                 {
                   key: 'allowances',
                   header: 'Allowances',
-                  cell: (item) => `$${item.allowances.toLocaleString()}`,
+                  cell: (item) => formatCurrencyINR(item.allowances),
                 },
                 {
                   key: 'deductions',
                   header: 'Deductions',
-                  cell: (item) => `$${item.deductions.toLocaleString()}`,
+                  cell: (item) => formatCurrencyINR(item.deductions),
                 },
                 {
                   key: 'netSalary',
                   header: 'Net Salary',
                   cell: (item) => (
-                    <p className="font-semibold text-green-600">${item.netSalary.toLocaleString()}</p>
+                    <p className="font-semibold text-green-600">{formatCurrencyINR(item.netSalary)}</p>
                   ),
                 },
                 {

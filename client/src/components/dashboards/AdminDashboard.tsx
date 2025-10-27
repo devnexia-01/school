@@ -3,9 +3,10 @@ import { StatCard } from '@/components/shared/StatCard';
 import { DataTable } from '@/components/shared/DataTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, Users, DollarSign, AlertCircle, Plus, ClipboardCheck, Send, Briefcase } from 'lucide-react';
+import { GraduationCap, Users, IndianRupee, AlertCircle, Plus, ClipboardCheck, Send, Briefcase } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -61,14 +62,14 @@ export function AdminDashboard() {
         />
         <StatCard
           title="Monthly Revenue"
-          value={isLoading ? '...' : stats?.monthlyRevenue || '$62,450'}
-          icon={DollarSign}
+          value={isLoading ? '...' : stats?.monthlyRevenue || formatCurrencyINR(62450)}
+          icon={IndianRupee}
           trend={{ value: 8.3, label: 'vs last month', isPositive: true }}
           testId="stat-monthly-revenue"
         />
         <StatCard
           title="Pending Fees"
-          value={isLoading ? '...' : stats?.pendingFees || '$8,230'}
+          value={isLoading ? '...' : stats?.pendingFees || formatCurrencyINR(8230)}
           icon={AlertCircle}
           trend={{ value: 3.2, label: 'vs last month', isPositive: false }}
           testId="stat-pending-fees"

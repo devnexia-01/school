@@ -3,11 +3,12 @@ import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Download, DollarSign } from 'lucide-react';
+import { Plus, Download, IndianRupee } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp, AlertCircle, CreditCard } from 'lucide-react';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Fees() {
   const feePayments = [
@@ -44,20 +45,20 @@ export default function Fees() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Total Collected"
-            value="$62,450"
-            icon={DollarSign}
+            value={formatCurrencyINR(62450)}
+            icon={IndianRupee}
             trend={{ value: 12.5, label: 'vs last month', isPositive: true }}
             testId="stat-total-collected"
           />
           <StatCard
             title="Pending Payments"
-            value="$8,230"
+            value={formatCurrencyINR(8230)}
             icon={AlertCircle}
             testId="stat-pending-payments"
           />
           <StatCard
             title="Overdue"
-            value="$2,100"
+            value={formatCurrencyINR(2100)}
             icon={TrendingUp}
             testId="stat-overdue"
           />
@@ -99,7 +100,7 @@ export default function Fees() {
                     {
                       key: 'amount',
                       header: 'Amount',
-                      cell: (item) => <span className="font-mono font-medium">${item.amount.toLocaleString()}</span>,
+                      cell: (item) => <span className="font-mono font-medium">{formatCurrencyINR(item.amount)}</span>,
                     },
                     {
                       key: 'date',
@@ -177,7 +178,7 @@ export default function Fees() {
                     {
                       key: 'amount',
                       header: 'Amount',
-                      cell: (item) => <span className="font-mono font-medium">${item.amount.toLocaleString()}</span>,
+                      cell: (item) => <span className="font-mono font-medium">{formatCurrencyINR(item.amount)}</span>,
                     },
                     {
                       key: 'dueDate',
