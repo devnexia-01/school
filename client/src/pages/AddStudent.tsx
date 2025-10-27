@@ -14,11 +14,22 @@ import { insertStudentSchema, type InsertStudent } from '@shared/schema';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { z } from 'zod';
 
-const studentFormSchema = insertStudentSchema.omit({ tenantId: true, createdAt: true }).extend({
+const studentFormSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  userId: z.string().optional(),
+  classId: z.string().optional().nullable(),
+  admissionNumber: z.string().min(1, 'Admission number is required'),
+  rollNumber: z.string().optional().nullable(),
+  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  gender: z.enum(['male', 'female', 'other']),
+  bloodGroup: z.string().optional().nullable(),
+  parentId: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  emergencyContact: z.string().optional().nullable(),
+  admissionDate: z.string().min(1, 'Admission date is required'),
 });
 
 type StudentFormValues = z.infer<typeof studentFormSchema>;
@@ -27,25 +38,27 @@ export default function AddStudent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: classesData } = useQuery({
+  const { data: classesData } = useQuery<{ classes: Array<{ id: string; name: string }> }>({
     queryKey: ['/api/classes'],
   });
 
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
-      admissionNumber: '',
-      rollNumber: '',
-      dateOfBirth: '',
-      gender: 'male',
-      bloodGroup: '',
-      address: '',
-      emergencyContact: '',
-      admissionDate: new Date().toISOString().split('T')[0],
       email: '',
       password: '',
       firstName: '',
       lastName: '',
+      classId: null,
+      admissionNumber: '',
+      rollNumber: null,
+      dateOfBirth: '',
+      gender: 'male',
+      bloodGroup: null,
+      parentId: null,
+      address: null,
+      emergencyContact: null,
+      admissionDate: new Date().toISOString().split('T')[0],
     },
   });
 
