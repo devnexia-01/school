@@ -62,14 +62,14 @@ export function AdminDashboard() {
         />
         <StatCard
           title="Monthly Revenue"
-          value={isLoading ? '...' : stats?.monthlyRevenue || formatCurrencyINR(62450)}
+          value={isLoading ? '...' : (stats?.monthlyRevenue ? formatCurrencyINR(stats.monthlyRevenue) : formatCurrencyINR(62450))}
           icon={IndianRupee}
           trend={{ value: 8.3, label: 'vs last month', isPositive: true }}
           testId="stat-monthly-revenue"
         />
         <StatCard
           title="Pending Fees"
-          value={isLoading ? '...' : stats?.pendingFees || formatCurrencyINR(8230)}
+          value={isLoading ? '...' : (stats?.pendingFees ? formatCurrencyINR(stats.pendingFees) : formatCurrencyINR(8230))}
           icon={AlertCircle}
           trend={{ value: 3.2, label: 'vs last month', isPositive: false }}
           testId="stat-pending-fees"

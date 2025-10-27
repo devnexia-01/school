@@ -74,8 +74,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         totalStudents: students.length,
         totalFaculty: 87,
-        monthlyRevenue: '$62,450',
-        pendingFees: '$8,230',
+        monthlyRevenue: 62450,
+        pendingFees: 8230,
       });
     } catch (error) {
       console.error('Dashboard stats error:', error);
