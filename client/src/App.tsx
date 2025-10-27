@@ -21,6 +21,8 @@ import LeaveManagement from "@/pages/LeaveManagement";
 import Reports from "@/pages/Reports";
 import Tenants from "@/pages/Tenants";
 import SupportTickets from "@/pages/SupportTickets";
+import ProfileSettings from "@/pages/ProfileSettings";
+import Preferences from "@/pages/Preferences";
 import NotFound from "@/pages/NotFound";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -115,6 +117,12 @@ function Router() {
       </Route>
       <Route path="/support-tickets">
         <ProtectedRoute component={SupportTickets} />
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute component={ProfileSettings} />
+      </Route>
+      <Route path="/preferences">
+        <ProtectedRoute component={Preferences} />
       </Route>
       <Route component={NotFound} />
     </Switch>

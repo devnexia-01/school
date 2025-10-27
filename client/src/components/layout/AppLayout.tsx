@@ -14,6 +14,7 @@ import {
 import { Bell, Search } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/input';
+import { useLocation } from 'wouter';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -21,6 +22,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
 
   const style = {
     '--sidebar-width': '16rem',
@@ -70,10 +72,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem data-testid="button-profile">
+                  <DropdownMenuItem onClick={() => setLocation('/profile')} data-testid="button-profile">
                     Profile Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem data-testid="button-preferences">
+                  <DropdownMenuItem onClick={() => setLocation('/preferences')} data-testid="button-preferences">
                     Preferences
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
