@@ -17,7 +17,7 @@ import {
   ClipboardCheck,
   Calendar,
   BookOpen,
-  DollarSign,
+  IndianRupee,
   FileText,
   MessageSquare,
   Settings,
@@ -95,7 +95,7 @@ const menuItems: MenuItem[] = [
   },
   {
     title: 'Fee Management',
-    icon: DollarSign,
+    icon: IndianRupee,
     path: '/fees',
     roles: ['admin', 'principal', 'parent'],
   },

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from '@/components/shared/StatCard';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Tenants() {
   const { user } = useAuth();
@@ -156,10 +157,10 @@ export default function Tenants() {
                         <SelectValue placeholder="Select plan" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="basic">Basic - $1,000/year</SelectItem>
-                        <SelectItem value="standard">Standard - $3,000/year</SelectItem>
-                        <SelectItem value="premium">Premium - $5,000/year</SelectItem>
-                        <SelectItem value="enterprise">Enterprise - $8,000/year</SelectItem>
+                        <SelectItem value="basic">Basic - {formatCurrencyINR(1000)}/year</SelectItem>
+                        <SelectItem value="standard">Standard - {formatCurrencyINR(3000)}/year</SelectItem>
+                        <SelectItem value="premium">Premium - {formatCurrencyINR(5000)}/year</SelectItem>
+                        <SelectItem value="enterprise">Enterprise - {formatCurrencyINR(8000)}/year</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -255,7 +256,7 @@ export default function Tenants() {
                   cell: (item) => (
                     <div>
                       <p className="font-medium">{item.plan}</p>
-                      <p className="text-sm text-muted-foreground">${item.subscription.price}/year</p>
+                      <p className="text-sm text-muted-foreground">{formatCurrencyINR(item.subscription.price)}/year</p>
                     </div>
                   ),
                 },

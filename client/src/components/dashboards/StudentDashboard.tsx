@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ClipboardCheck, FileText, DollarSign, Bell, User, Bus, BookOpen } from 'lucide-react';
+import { Calendar, ClipboardCheck, FileText, IndianRupee, Bell, User, Bus, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Link } from 'wouter';
@@ -109,7 +109,7 @@ export function StudentDashboard() {
                   <p className="text-xs text-muted-foreground">Next due: Feb 1, 2025</p>
                 </div>
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-primary" />
+                  <IndianRupee className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -155,7 +155,7 @@ export function StudentDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-500/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-purple-500" />
+                  <IndianRupee className="h-6 w-6 text-purple-500" />
                 </div>
                 <div>
                   <p className="font-semibold">Pay Fees</p>

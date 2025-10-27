@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardCheck, FileText, DollarSign, MessageSquare, Calendar } from 'lucide-react';
+import { ClipboardCheck, FileText, IndianRupee, MessageSquare, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
@@ -110,7 +110,7 @@ export function ParentDashboard() {
                 )}
               </div>
               <div className="p-3 bg-primary/10 rounded-lg">
-                <DollarSign className="h-6 w-6 text-primary" />
+                <IndianRupee className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
