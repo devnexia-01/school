@@ -13,6 +13,14 @@ import Academics from "@/pages/Academics";
 import Fees from "@/pages/Fees";
 import Examinations from "@/pages/Examinations";
 import Communication from "@/pages/Communication";
+import Faculty from "@/pages/Faculty";
+import Timetable from "@/pages/Timetable";
+import Transport from "@/pages/Transport";
+import Payroll from "@/pages/Payroll";
+import LeaveManagement from "@/pages/LeaveManagement";
+import Reports from "@/pages/Reports";
+import Tenants from "@/pages/Tenants";
+import SupportTickets from "@/pages/SupportTickets";
 import NotFound from "@/pages/NotFound";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -83,6 +91,30 @@ function Router() {
       </Route>
       <Route path="/communication">
         <ProtectedRoute component={Communication} />
+      </Route>
+      <Route path="/faculty">
+        <ProtectedRoute component={Faculty} />
+      </Route>
+      <Route path="/timetable">
+        <ProtectedRoute component={Timetable} />
+      </Route>
+      <Route path="/transport">
+        <ProtectedRoute component={Transport} />
+      </Route>
+      <Route path="/payroll">
+        <ProtectedRoute component={Payroll} />
+      </Route>
+      <Route path="/leave-management">
+        <ProtectedRoute component={LeaveManagement} />
+      </Route>
+      <Route path="/reports">
+        <ProtectedRoute component={Reports} />
+      </Route>
+      <Route path="/tenants">
+        <ProtectedRoute component={Tenants} />
+      </Route>
+      <Route path="/support-tickets">
+        <ProtectedRoute component={SupportTickets} />
       </Route>
       <Route component={NotFound} />
     </Switch>

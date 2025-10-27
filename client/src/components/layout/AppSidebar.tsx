@@ -23,6 +23,11 @@ import {
   Settings,
   Building2,
   UserCog,
+  Bus,
+  Wallet,
+  CalendarDays,
+  BarChart3,
+  LifeBuoy,
 } from 'lucide-react';
 import { useAuth, type UserRole } from '@/lib/auth';
 
@@ -41,10 +46,28 @@ const menuItems: MenuItem[] = [
     roles: ['super_admin', 'admin', 'principal', 'faculty', 'student', 'parent'],
   },
   {
+    title: 'Schools',
+    icon: Building2,
+    path: '/tenants',
+    roles: ['super_admin'],
+  },
+  {
+    title: 'Support Tickets',
+    icon: LifeBuoy,
+    path: '/support-tickets',
+    roles: ['super_admin'],
+  },
+  {
     title: 'Students',
     icon: GraduationCap,
     path: '/students',
     roles: ['admin', 'principal', 'faculty'],
+  },
+  {
+    title: 'Faculty',
+    icon: Users,
+    path: '/faculty',
+    roles: ['admin', 'principal'],
   },
   {
     title: 'Attendance',
@@ -59,6 +82,12 @@ const menuItems: MenuItem[] = [
     roles: ['admin', 'principal'],
   },
   {
+    title: 'Timetable',
+    icon: Calendar,
+    path: '/timetable',
+    roles: ['admin', 'principal', 'faculty', 'student'],
+  },
+  {
     title: 'Examinations',
     icon: FileText,
     path: '/examinations',
@@ -69,6 +98,30 @@ const menuItems: MenuItem[] = [
     icon: DollarSign,
     path: '/fees',
     roles: ['admin', 'principal', 'parent'],
+  },
+  {
+    title: 'Payroll',
+    icon: Wallet,
+    path: '/payroll',
+    roles: ['admin'],
+  },
+  {
+    title: 'Transport',
+    icon: Bus,
+    path: '/transport',
+    roles: ['admin', 'student', 'parent'],
+  },
+  {
+    title: 'Leave Management',
+    icon: CalendarDays,
+    path: '/leave-management',
+    roles: ['admin', 'principal', 'faculty'],
+  },
+  {
+    title: 'Reports & Analytics',
+    icon: BarChart3,
+    path: '/reports',
+    roles: ['admin', 'principal'],
   },
   {
     title: 'Communication',
