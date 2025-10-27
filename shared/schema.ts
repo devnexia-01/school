@@ -191,6 +191,125 @@ export const classSubjects = pgTable("class_subjects", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Timetable Table
+export const timetableEnum = pgEnum("day_of_week", ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]);
+
+export const timetable = pgTable("timetable", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  classId: varchar("class_id", { length: 255 }).references(() => classes.id, { onDelete: "cascade" }).notNull(),
+  subjectId: varchar("subject_id", { length: 255 }).references(() => subjects.id, { onDelete: "cascade" }).notNull(),
+  teacherId: varchar("teacher_id", { length: 255 }).references(() => users.id),
+  dayOfWeek: timetableEnum("day_of_week").notNull(),
+  startTime: varchar("start_time", { length: 10 }).notNull(),
+  endTime: varchar("end_time", { length: 10 }).notNull(),
+  roomNumber: varchar("room_number", { length: 50 }),
+  academicYear: varchar("academic_year", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Transport Routes Table
+export const transportRoutes = pgTable("transport_routes", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  routeName: text("route_name").notNull(),
+  routeNumber: varchar("route_number", { length: 50 }).notNull(),
+  driverName: text("driver_name"),
+  driverPhone: varchar("driver_phone", { length: 20 }),
+  vehicleNumber: varchar("vehicle_number", { length: 50 }),
+  capacity: integer("capacity"),
+  fare: decimal("fare", { precision: 10, scale: 2 }),
+  stops: text("stops"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Student Transport Mapping
+export const studentTransport = pgTable("student_transport", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  studentId: varchar("student_id", { length: 255 }).references(() => students.id, { onDelete: "cascade" }).notNull(),
+  routeId: varchar("route_id", { length: 255 }).references(() => transportRoutes.id, { onDelete: "cascade" }).notNull(),
+  pickupStop: text("pickup_stop"),
+  dropStop: text("drop_stop"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Payroll Table
+export const payrollStatusEnum = pgEnum("payroll_status", ["draft", "approved", "paid"]);
+
+export const payroll = pgTable("payroll", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
+  month: varchar("month", { length: 20 }).notNull(),
+  year: integer("year").notNull(),
+  basicSalary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
+  allowances: decimal("allowances", { precision: 10, scale: 2 }).default('0'),
+  deductions: decimal("deductions", { precision: 10, scale: 2 }).default('0'),
+  netSalary: decimal("net_salary", { precision: 10, scale: 2 }).notNull(),
+  status: payrollStatusEnum("status").default("draft").notNull(),
+  paidOn: date("paid_on"),
+  remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Leave Requests Table
+export const leaveTypeEnum = pgEnum("leave_type", ["sick", "casual", "earned", "maternity", "other"]);
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
+
+export const leaveRequests = pgTable("leave_requests", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
+  leaveType: leaveTypeEnum("leave_type").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  reason: text("reason").notNull(),
+  status: leaveStatusEnum("status").default("pending").notNull(),
+  reviewedBy: varchar("reviewed_by", { length: 255 }).references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Support Tickets Table (for super admin)
+export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "resolved", "closed"]);
+export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high", "urgent"]);
+
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }),
+  createdBy: varchar("created_by", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  priority: ticketPriorityEnum("priority").default("medium").notNull(),
+  status: ticketStatusEnum("status").default("open").notNull(),
+  assignedTo: varchar("assigned_to", { length: 255 }).references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Subscriptions Table (for super admin)
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["trial", "active", "suspended", "cancelled"]);
+
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull().unique(),
+  planName: varchar("plan_name", { length: 100 }).notNull(),
+  maxStudents: integer("max_students").notNull(),
+  maxFaculty: integer("max_faculty").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  billingCycle: varchar("billing_cycle", { length: 20 }).notNull(),
+  status: subscriptionStatusEnum("status").default("trial").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  autoRenew: boolean("auto_renew").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -362,6 +481,96 @@ export const classSubjectsRelations = relations(classSubjects, ({ one }) => ({
   }),
 }));
 
+export const timetableRelations = relations(timetable, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [timetable.tenantId],
+    references: [tenants.id],
+  }),
+  class: one(classes, {
+    fields: [timetable.classId],
+    references: [classes.id],
+  }),
+  subject: one(subjects, {
+    fields: [timetable.subjectId],
+    references: [subjects.id],
+  }),
+  teacher: one(users, {
+    fields: [timetable.teacherId],
+    references: [users.id],
+  }),
+}));
+
+export const transportRoutesRelations = relations(transportRoutes, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [transportRoutes.tenantId],
+    references: [tenants.id],
+  }),
+  studentTransports: many(studentTransport),
+}));
+
+export const studentTransportRelations = relations(studentTransport, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [studentTransport.tenantId],
+    references: [tenants.id],
+  }),
+  student: one(students, {
+    fields: [studentTransport.studentId],
+    references: [students.id],
+  }),
+  route: one(transportRoutes, {
+    fields: [studentTransport.routeId],
+    references: [transportRoutes.id],
+  }),
+}));
+
+export const payrollRelations = relations(payroll, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [payroll.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [payroll.userId],
+    references: [users.id],
+  }),
+}));
+
+export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [leaveRequests.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [leaveRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [leaveRequests.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [supportTickets.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [supportTickets.createdBy],
+    references: [users.id],
+  }),
+  assignee: one(users, {
+    fields: [supportTickets.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [subscriptions.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
 // Insert Schemas
 export const insertTenantSchema = createInsertSchema(tenants).omit({
   id: true,
@@ -424,6 +633,41 @@ export const insertClassSubjectSchema = createInsertSchema(classSubjects).omit({
   createdAt: true,
 });
 
+export const insertTimetableSchema = createInsertSchema(timetable).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTransportRouteSchema = createInsertSchema(transportRoutes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStudentTransportSchema = createInsertSchema(studentTransport).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPayrollSchema = createInsertSchema(payroll).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLeaveRequestSchema = createInsertSchema(leaveRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
@@ -460,3 +704,24 @@ export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 
 export type ClassSubject = typeof classSubjects.$inferSelect;
 export type InsertClassSubject = z.infer<typeof insertClassSubjectSchema>;
+
+export type Timetable = typeof timetable.$inferSelect;
+export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
+
+export type TransportRoute = typeof transportRoutes.$inferSelect;
+export type InsertTransportRoute = z.infer<typeof insertTransportRouteSchema>;
+
+export type StudentTransport = typeof studentTransport.$inferSelect;
+export type InsertStudentTransport = z.infer<typeof insertStudentTransportSchema>;
+
+export type Payroll = typeof payroll.$inferSelect;
+export type InsertPayroll = z.infer<typeof insertPayrollSchema>;
+
+export type LeaveRequest = typeof leaveRequests.$inferSelect;
+export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
