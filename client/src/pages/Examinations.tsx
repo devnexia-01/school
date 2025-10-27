@@ -76,17 +76,28 @@ export default function Examinations() {
                     {
                       key: 'status',
                       header: 'Status',
-                      cell: (item) => (
-                        <Badge
-                          variant={
-                            item.status === 'in_progress' ? 'default' :
-                            item.status === 'upcoming' ? 'secondary' :
-                            'outline'
-                          }
-                        >
-                          {item.status.replace('_', ' ')}
-                        </Badge>
-                      ),
+                      cell: (item) => {
+                        const today = new Date();
+                        const startDate = new Date(item.startDate);
+                        const endDate = new Date(item.endDate);
+                        
+                        let status = 'completed';
+                        let variant: 'default' | 'secondary' | 'outline' = 'outline';
+                        
+                        if (today < startDate) {
+                          status = 'upcoming';
+                          variant = 'secondary';
+                        } else if (today >= startDate && today <= endDate) {
+                          status = 'in progress';
+                          variant = 'default';
+                        }
+                        
+                        return (
+                          <Badge variant={variant}>
+                            {status}
+                          </Badge>
+                        );
+                      },
                     },
                     {
                       key: 'actions',

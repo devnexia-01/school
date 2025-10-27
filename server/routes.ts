@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============ Tenants Routes (Super Admin only) ============
   app.get('/api/tenants', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
     try {
-      const tenantsData = await db.select().from({ tenants });
+      const tenantsData = await storage.getAllTenants();
       res.json({ tenants: tenantsData });
     } catch (error) {
       console.error('Get tenants error:', error);

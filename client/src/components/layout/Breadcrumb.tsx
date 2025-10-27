@@ -13,11 +13,11 @@ interface BreadcrumbProps {
 export function Breadcrumb({ items }: BreadcrumbProps) {
   return (
     <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-      <Link href="/dashboard" data-testid="breadcrumb-home">
-        <a className="flex items-center gap-1 hover:text-foreground transition-colors">
+      <Link href="/dashboard">
+        <span className="flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer" data-testid="breadcrumb-home">
           <Home className="h-4 w-4" />
           Dashboard
-        </a>
+        </span>
       </Link>
       
       {items.map((item, index) => (
@@ -25,9 +25,9 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
           <ChevronRight className="h-4 w-4" />
           {item.href ? (
             <Link href={item.href}>
-              <a className="hover:text-foreground transition-colors" data-testid={`breadcrumb-${item.label.toLowerCase()}`}>
+              <span className="hover:text-foreground transition-colors cursor-pointer" data-testid={`breadcrumb-${item.label.toLowerCase()}`}>
                 {item.label}
-              </a>
+              </span>
             </Link>
           ) : (
             <span className="text-foreground font-medium" data-testid={`breadcrumb-${item.label.toLowerCase()}`}>

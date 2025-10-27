@@ -88,14 +88,9 @@ export default function Communication() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <CardTitle>Messages</CardTitle>
-                </div>
-                <Button size="sm" variant="outline" data-testid="button-compose-message">
-                  Compose
-                </Button>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                <CardTitle>Messages</CardTitle>
               </div>
               <CardDescription>Your conversations and messages</CardDescription>
             </CardHeader>
