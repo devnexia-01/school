@@ -357,6 +357,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ User Profile Routes ============
+  app.get('/api/profile', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const { password, ...userProfile } = user;
+      res.json(userProfile);
+    } catch (error) {
+      console.error('Get profile error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/profile', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { firstName, lastName, phone, avatar } = req.body;
+      
+      const updatedUser = await storage.updateUserProfile(userId, {
+        firstName,
+        lastName,
+        phone,
+        avatar,
+      });
+      
+      const { password, ...userProfile } = updatedUser;
+      res.json(userProfile);
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ User Preferences Routes ============
+  app.get('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      let prefs = await storage.getUserPreferences(userId);
+      
+      if (!prefs) {
+        prefs = await storage.createUserPreferences({ userId });
+      }
+      
+      res.json(prefs);
+    } catch (error) {
+      console.error('Get preferences error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { theme, language, emailNotifications, pushNotifications, timezone, dateFormat } = req.body;
+      
+      let prefs = await storage.getUserPreferences(userId);
+      
+      if (!prefs) {
+        prefs = await storage.createUserPreferences({
+          userId,
+          theme,
+          language,
+          emailNotifications,
+          pushNotifications,
+          timezone,
+          dateFormat,
+        });
+      } else {
+        prefs = await storage.updateUserPreferences(userId, {
+          theme,
+          language,
+          emailNotifications,
+          pushNotifications,
+          timezone,
+          dateFormat,
+        });
+      }
+      
+      res.json(prefs);
+    } catch (error) {
+      console.error('Update preferences error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Tenants Routes (Super Admin only) ============
   app.get('/api/tenants', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
     try {

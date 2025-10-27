@@ -310,6 +310,20 @@ export const subscriptions = pgTable("subscriptions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User Preferences Table
+export const userPreferences = pgTable("user_preferences", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
+  theme: varchar("theme", { length: 20 }).default("system"),
+  language: varchar("language", { length: 20 }).default("en"),
+  emailNotifications: boolean("email_notifications").default(true).notNull(),
+  pushNotifications: boolean("push_notifications").default(true).notNull(),
+  timezone: varchar("timezone", { length: 50 }).default("UTC"),
+  dateFormat: varchar("date_format", { length: 20 }).default("MM/DD/YYYY"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Relations
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   users: many(users),
@@ -668,6 +682,12 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
   createdAt: true,
 });
 
+export const insertUserPreferenceSchema = createInsertSchema(userPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
@@ -725,3 +745,6 @@ export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type InsertUserPreference = z.infer<typeof insertUserPreferenceSchema>;

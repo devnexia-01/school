@@ -11,6 +11,7 @@ import {
   feePayments,
   announcements,
   classSubjects,
+  userPreferences,
   type User,
   type InsertUser,
   type Tenant,
@@ -35,6 +36,8 @@ import {
   type InsertAnnouncement,
   type ClassSubject,
   type InsertClassSubject,
+  type UserPreference,
+  type InsertUserPreference,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -88,6 +91,14 @@ export interface IStorage {
   // Announcements
   getAnnouncementsByTenant(tenantId: string): Promise<Announcement[]>;
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  
+  // User Preferences
+  getUserPreferences(userId: string): Promise<UserPreference | undefined>;
+  createUserPreferences(prefs: InsertUserPreference): Promise<UserPreference>;
+  updateUserPreferences(userId: string, prefs: Partial<InsertUserPreference>): Promise<UserPreference>;
+  
+  // User Profile
+  updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -270,6 +281,42 @@ export class DatabaseStorage implements IStorage {
       .values(insertAnnouncement)
       .returning();
     return announcement;
+  }
+
+  // User Preferences
+  async getUserPreferences(userId: string): Promise<UserPreference | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
+    return prefs || undefined;
+  }
+
+  async createUserPreferences(insertPrefs: InsertUserPreference): Promise<UserPreference> {
+    const [prefs] = await db
+      .insert(userPreferences)
+      .values(insertPrefs)
+      .returning();
+    return prefs;
+  }
+
+  async updateUserPreferences(userId: string, updatePrefs: Partial<InsertUserPreference>): Promise<UserPreference> {
+    const [prefs] = await db
+      .update(userPreferences)
+      .set({ ...updatePrefs, updatedAt: new Date() })
+      .where(eq(userPreferences.userId, userId))
+      .returning();
+    return prefs;
+  }
+
+  // User Profile
+  async updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(profileData)
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 }
 
