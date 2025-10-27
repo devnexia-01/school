@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, tenantIsolation, generateToken, type AuthRequest } from "./middleware/auth";
+import { insertTenantSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 
@@ -352,6 +353,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(announcement);
     } catch (error) {
       console.error('Create announcement error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Tenants Routes (Super Admin only) ============
+  app.get('/api/tenants', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
+    try {
+      const tenantsData = await db.select().from({ tenants });
+      res.json({ tenants: tenantsData });
+    } catch (error) {
+      console.error('Get tenants error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/tenants', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const validatedData = insertTenantSchema.parse(req.body);
+      const tenant = await storage.createTenant(validatedData);
+      res.status(201).json(tenant);
+    } catch (error: any) {
+      console.error('Create tenant error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Validation failed', details: error.errors });
+      }
       res.status(500).json({ error: 'Internal server error' });
     }
   });

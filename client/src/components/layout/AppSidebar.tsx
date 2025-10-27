@@ -44,37 +44,37 @@ const menuItems: MenuItem[] = [
     title: 'Students',
     icon: GraduationCap,
     path: '/students',
-    roles: ['super_admin', 'admin', 'principal', 'faculty'],
+    roles: ['admin', 'principal', 'faculty'],
   },
   {
     title: 'Attendance',
     icon: ClipboardCheck,
     path: '/attendance',
-    roles: ['super_admin', 'admin', 'principal', 'faculty', 'student', 'parent'],
+    roles: ['admin', 'principal', 'faculty'],
   },
   {
     title: 'Classes & Subjects',
     icon: BookOpen,
     path: '/academics',
-    roles: ['super_admin', 'admin', 'principal', 'faculty'],
+    roles: ['admin', 'principal'],
   },
   {
     title: 'Examinations',
     icon: FileText,
     path: '/examinations',
-    roles: ['super_admin', 'admin', 'principal', 'faculty', 'student', 'parent'],
+    roles: ['admin', 'principal', 'faculty', 'student', 'parent'],
   },
   {
     title: 'Fee Management',
     icon: DollarSign,
     path: '/fees',
-    roles: ['super_admin', 'admin', 'principal', 'parent'],
+    roles: ['admin', 'principal', 'parent'],
   },
   {
     title: 'Communication',
     icon: MessageSquare,
     path: '/communication',
-    roles: ['super_admin', 'admin', 'principal', 'faculty', 'student', 'parent'],
+    roles: ['admin', 'principal', 'faculty', 'student', 'parent'],
   },
 ];
 

@@ -7,8 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/lib/auth';
 
 export default function Academics() {
+  const { user } = useAuth();
+  const canManageAcademics = user && ['admin', 'principal'].includes(user.role);
+  
   const classes = [
     { id: '1', name: 'Grade 8-A', grade: 8, section: 'A', students: 42, capacity: 45, teacher: 'Ms. Anderson' },
     { id: '2', name: 'Grade 8-B', grade: 8, section: 'B', students: 38, capacity: 45, teacher: 'Mr. Wilson' },
@@ -53,10 +57,12 @@ export default function Academics() {
                     <CardTitle>All Classes</CardTitle>
                     <CardDescription>Manage class sections and capacity</CardDescription>
                   </div>
-                  <Button data-testid="button-add-class">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Class
-                  </Button>
+                  {canManageAcademics && (
+                    <Button data-testid="button-add-class">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Class
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -124,10 +130,12 @@ export default function Academics() {
                     <CardTitle>All Subjects</CardTitle>
                     <CardDescription>Manage subject curriculum and assignments</CardDescription>
                   </div>
-                  <Button data-testid="button-add-subject">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Subject
-                  </Button>
+                  {canManageAcademics && (
+                    <Button data-testid="button-add-subject">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Subject
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>

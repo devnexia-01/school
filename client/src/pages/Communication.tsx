@@ -1,16 +1,21 @@
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Bell, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/lib/auth';
 
 export default function Communication() {
-  const announcements = [
-    { id: '1', title: 'Mid-term exam schedule published', content: 'The schedule for mid-term examinations has been published. Please check the timetable section.', date: '2025-01-15', priority: 'high', author: 'Principal' },
-    { id: '2', title: 'Sports day on January 25th', content: 'Annual sports day will be held on January 25th. All students are requested to participate.', date: '2025-01-14', priority: 'normal', author: 'Sports Coordinator' },
-    { id: '3', title: 'Library reopening after maintenance', content: 'The school library will reopen on January 18th after scheduled maintenance work.', date: '2025-01-12', priority: 'low', author: 'Librarian' },
-  ];
+  const { user } = useAuth();
+  const canCreateAnnouncement = user && ['admin', 'principal'].includes(user.role);
+
+  const { data: announcementsData, isLoading: announcementsLoading } = useQuery<{ announcements: Array<any> }>({
+    queryKey: ['/api/announcements'],
+  });
+
+  const announcements = announcementsData?.announcements || [];
 
   const messages = [
     { id: '1', from: 'Mrs. Johnson (Parent)', subject: 'Question about homework assignment', preview: 'I have a question regarding the mathematics homework...', time: '2 hours ago', unread: true },
@@ -28,10 +33,12 @@ export default function Communication() {
             <h1 className="text-3xl font-semibold">Communication Hub</h1>
             <p className="text-muted-foreground mt-1">Announcements and messaging</p>
           </div>
-          <Button data-testid="button-create-announcement">
-            <Plus className="mr-2 h-4 w-4" />
-            New Announcement
-          </Button>
+          {canCreateAnnouncement && (
+            <Button data-testid="button-create-announcement">
+              <Plus className="mr-2 h-4 w-4" />
+              New Announcement
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -44,8 +51,13 @@ export default function Communication() {
               <CardDescription>School-wide notifications and updates</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {announcements.map((announcement) => (
+              {announcementsLoading ? (
+                <div className="text-center text-muted-foreground p-4">Loading announcements...</div>
+              ) : announcements.length === 0 ? (
+                <div className="text-center text-muted-foreground p-4">No announcements available</div>
+              ) : (
+                <div className="space-y-4">
+                  {announcements.map((announcement) => (
                   <div key={announcement.id} className="p-4 rounded-lg hover-elevate border" data-testid={`announcement-${announcement.id}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -68,8 +80,9 @@ export default function Communication() {
                       <span>{announcement.date}</span>
                     </div>
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

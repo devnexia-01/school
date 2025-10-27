@@ -1,18 +1,86 @@
+import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { StatCard } from '@/components/shared/StatCard';
 import { DataTable } from '@/components/shared/DataTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Users, DollarSign, TrendingUp, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export function SuperAdminDashboard() {
-  const schools = [
-    { id: '1', name: 'Springfield High School', students: 1248, plan: 'Premium', status: 'active', revenue: '$2,450' },
-    { id: '2', name: 'Riverside Academy', students: 856, plan: 'Standard', status: 'active', revenue: '$1,820' },
-    { id: '3', name: 'Oak Valley School', students: 642, plan: 'Basic', status: 'active', revenue: '$980' },
-    { id: '4', name: 'Maple Leaf International', students: 1520, plan: 'Enterprise', status: 'active', revenue: '$4,200' },
-    { id: '5', name: 'Sunrise Elementary', students: 445, plan: 'Standard', status: 'trial', revenue: '$0' },
-  ];
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [schoolName, setSchoolName] = useState('');
+  const [schoolCode, setSchoolCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const { toast } = useToast();
+
+  const { data: tenantsData, isLoading } = useQuery<{ tenants: Array<any> }>({
+    queryKey: ['/api/tenants'],
+  });
+
+  const createSchoolMutation = useMutation({
+    mutationFn: async (data: { name: string; code: string; email: string; phone?: string; address?: string }) => {
+      return await apiRequest('/api/tenants', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
+      toast({
+        title: 'School Added',
+        description: `${schoolName} has been added successfully`,
+      });
+      setIsDialogOpen(false);
+      setSchoolName('');
+      setSchoolCode('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add school',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleAddSchool = async () => {
+    if (!schoolName || !schoolCode || !email) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createSchoolMutation.mutate({
+      name: schoolName,
+      code: schoolCode,
+      email,
+      phone,
+      address,
+    });
+  };
+
+  const schools = (tenantsData?.tenants || []).map(tenant => ({
+    id: tenant.id,
+    name: tenant.name,
+    students: 0,
+    plan: 'Standard',
+    status: tenant.active ? 'active' : 'inactive',
+    revenue: '$0',
+  }));
 
   return (
     <div className="p-6 space-y-8 max-w-7xl">
@@ -21,10 +89,83 @@ export function SuperAdminDashboard() {
           <h1 className="text-3xl font-semibold mb-2">Super Admin Dashboard</h1>
           <p className="text-muted-foreground">Platform-wide analytics and school management</p>
         </div>
-        <Button data-testid="button-add-school">
-          <Plus className="mr-2 h-4 w-4" />
-          Add School
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-school">
+              <Plus className="mr-2 h-4 w-4" />
+              Add School
+            </Button>
+          </DialogTrigger>
+          <DialogContent data-testid="dialog-add-school">
+            <DialogHeader data-testid="dialog-header-add-school">
+              <DialogTitle data-testid="dialog-title-add-school">Add New School</DialogTitle>
+              <DialogDescription data-testid="dialog-description-add-school">
+                Enter the details of the new school to onboard them to the platform.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="schoolName">School Name *</Label>
+                <Input
+                  id="schoolName"
+                  placeholder="Enter school name"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  data-testid="input-school-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="schoolCode">School Code *</Label>
+                <Input
+                  id="schoolCode"
+                  placeholder="e.g., SHS001"
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value)}
+                  data-testid="input-school-code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="school@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  data-testid="input-school-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="+1-555-0100"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  data-testid="input-school-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="School address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  data-testid="input-school-address"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="button-cancel-school">
+                Cancel
+              </Button>
+              <Button onClick={handleAddSchool} disabled={createSchoolMutation.isPending} data-testid="button-submit-school">
+                {createSchoolMutation.isPending ? 'Adding...' : 'Add School'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -66,6 +207,8 @@ export function SuperAdminDashboard() {
         <CardContent>
           <DataTable
             data={schools}
+            isLoading={isLoading}
+            emptyMessage="No schools found"
             columns={[
               {
                 key: 'name',

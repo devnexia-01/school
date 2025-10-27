@@ -11,8 +11,10 @@ import { Plus, Search, Download, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
+import { useAuth } from '@/lib/auth';
 
 export default function Students() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -21,7 +23,26 @@ export default function Students() {
     queryKey: ['/api/students'],
   });
 
-  const students = data?.students || [];
+  const { data: classesData } = useQuery<{ classes: Array<{ id: string; name: string }> }>({
+    queryKey: ['/api/classes'],
+  });
+
+  const allStudents = data?.students || [];
+  
+  const canAddStudent = user && ['admin', 'principal'].includes(user.role);
+  
+  const filteredStudents = allStudents.filter(student => {
+    const matchesSearch = searchQuery === '' || 
+      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.email && student.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesClass = classFilter === 'all' || student.class === classFilter;
+    
+    return matchesSearch && matchesClass;
+  });
+  
+  const students = filteredStudents;
 
   return (
     <AppLayout>
@@ -38,12 +59,14 @@ export default function Students() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Link href="/students/add">
-              <Button data-testid="button-add-student">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Student
-              </Button>
-            </Link>
+            {canAddStudent && (
+              <Link href="/students/add">
+                <Button data-testid="button-add-student">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Student
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -70,11 +93,11 @@ export default function Students() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
-                  <SelectItem value="8">Grade 8</SelectItem>
-                  <SelectItem value="9">Grade 9</SelectItem>
-                  <SelectItem value="10">Grade 10</SelectItem>
-                  <SelectItem value="11">Grade 11</SelectItem>
-                  <SelectItem value="12">Grade 12</SelectItem>
+                  {classesData?.classes?.map((classItem) => (
+                    <SelectItem key={classItem.id} value={classItem.name}>
+                      {classItem.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
