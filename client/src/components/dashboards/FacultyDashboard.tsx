@@ -1,7 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, ClipboardCheck, FileText, MessageSquare } from 'lucide-react';
+import { Clock, ClipboardCheck, FileText, MessageSquare, Wallet, CalendarDays, BookOpen, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'wouter';
+import { StatCard } from '@/components/shared/StatCard';
 
 export function FacultyDashboard() {
   const todaysClasses = [
@@ -30,6 +32,93 @@ export function FacultyDashboard() {
         <p className="text-muted-foreground">Your schedule and teaching activities</p>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard
+          title="Classes Today"
+          value="4"
+          icon={BookOpen}
+        />
+        <StatCard
+          title="Pending Grading"
+          value="3"
+          icon={FileText}
+        />
+        <StatCard
+          title="Leave Balance"
+          value="12 days"
+          icon={CalendarDays}
+        />
+        <StatCard
+          title="This Month Salary"
+          value="$4,800"
+          icon={Wallet}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Link href="/attendance">
+          <Card className="hover-elevate cursor-pointer transition-all">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <ClipboardCheck className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="font-semibold">Mark Attendance</p>
+                  <p className="text-sm text-muted-foreground">Today's classes</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/examinations">
+          <Card className="hover-elevate cursor-pointer transition-all">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-500/10 rounded-lg">
+                  <FileText className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="font-semibold">Enter Grades</p>
+                  <p className="text-sm text-muted-foreground">3 pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-salary-slip">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-500/10 rounded-lg">
+                <Wallet className="h-6 w-6 text-purple-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Salary Slip</p>
+                <p className="text-sm text-muted-foreground">View & download</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Link href="/leave-management">
+          <Card className="hover-elevate cursor-pointer transition-all">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-500/10 rounded-lg">
+                  <CalendarDays className="h-6 w-6 text-orange-500" />
+                </div>
+                <div>
+                  <p className="font-semibold">Apply Leave</p>
+                  <p className="text-sm text-muted-foreground">12 days left</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -37,10 +126,11 @@ export function FacultyDashboard() {
               <CardTitle>Today's Classes</CardTitle>
               <CardDescription>Your teaching schedule for today</CardDescription>
             </div>
-            <Button data-testid="button-mark-attendance">
-              <ClipboardCheck className="mr-2 h-4 w-4" />
-              Mark Attendance
-            </Button>
+            <Link href="/timetable">
+              <Button variant="outline" size="sm">
+                View Full Timetable
+              </Button>
+            </Link>
           </div>
         </CardHeader>
         <CardContent>
@@ -87,7 +177,7 @@ export function FacultyDashboard() {
                     <span className="text-sm text-muted-foreground">
                       {item.submitted}/{item.total} submitted
                     </span>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" data-testid={`button-grade-${item.id}`}>
                       <FileText className="mr-2 h-4 w-4" />
                       Grade Now
                     </Button>
