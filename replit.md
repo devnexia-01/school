@@ -4,6 +4,16 @@
 
 A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system built as a SaaS platform. The application serves K-12 educational institutions (50-5000+ students) with modules for student management, attendance tracking, academics, fee management, examinations, communication, faculty management, payroll, and reporting. The system supports multiple user roles (super admin, admin, principal, faculty, student, parent) with role-based access control and tenant isolation.
 
+## Recent Changes
+
+### Performance Optimizations (October 29, 2025)
+- **Fixed N+1 Query Problem**: Replaced sequential database queries in `/api/students` endpoint with a single JOIN query, reducing database round-trips from N+1 to 1
+- **Lazy Route Loading**: Implemented React.lazy() and Suspense for all frontend routes to reduce initial bundle size and improve page load times
+- **Database Indexes**: Added indexes to frequently queried fields (tenantId, userId, classId, email) across all major tables to speed up query execution
+- **Pagination Support**: Added limit/offset pagination to student list endpoint with parameter validation (capped at 1000, rejects invalid values)
+- **Deterministic Ordering**: Added orderBy clause to student queries for consistent pagination results
+- **Optimized Dashboard Stats**: Replaced full table scan with COUNT query for student totals
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -33,8 +43,9 @@ Preferred communication style: Simple, everyday language.
 **Key Architectural Decisions**:
 - Component-based architecture with reusable UI components (`StatCard`, `DataTable`, `Breadcrumb`)
 - Role-based dashboard rendering - separate dashboard components for each user role
-- Protected route pattern using `ProtectedRoute` wrapper component
+- Protected route pattern using `ProtectedRoute` wrapper component with Suspense for lazy loading
 - Path aliases configured for cleaner imports (`@/`, `@shared/`, `@assets/`)
+- Lazy loading for all routes to reduce initial bundle size and improve page load performance
 
 ### Backend Architecture
 
@@ -61,6 +72,8 @@ Preferred communication style: Simple, everyday language.
 - Middleware pipeline for logging, authentication, and tenant isolation
 - Type-safe schema definitions shared between client and server (`shared/schema.ts`)
 - Database migrations managed through Drizzle Kit
+- Optimized JOIN queries to eliminate N+1 query patterns
+- Pagination support with parameter validation for list endpoints
 
 ### Data Storage
 
@@ -85,6 +98,7 @@ Preferred communication style: Simple, everyday language.
 - Timestamp tracking (`createdAt`) on all tables
 - Enum types for standardized values (user roles, attendance status, gender, fee status, exam types)
 - Foreign key constraints with cascade delete for data integrity
+- Database indexes on frequently queried columns (tenantId, userId, classId, email, composite indexes for date-based queries)
 
 ### External Dependencies
 
