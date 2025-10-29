@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,27 +10,37 @@ import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 
+interface Class {
+  _id: string;
+  name: string;
+  grade: number;
+  section: string;
+  capacity: number;
+  classTeacherId?: string;
+  academicYear: string;
+}
+
+interface Subject {
+  _id: string;
+  name: string;
+  code: string;
+  description?: string;
+}
+
 export default function Academics() {
   const { user } = useAuth();
   const canManageAcademics = user && ['admin', 'principal'].includes(user.role);
   
-  const classes = [
-    { id: '1', name: 'Grade 8-A', grade: 8, section: 'A', students: 42, capacity: 45, teacher: 'Ms. Anderson' },
-    { id: '2', name: 'Grade 8-B', grade: 8, section: 'B', students: 38, capacity: 45, teacher: 'Mr. Wilson' },
-    { id: '3', name: 'Grade 9-A', grade: 9, section: 'A', students: 40, capacity: 40, teacher: 'Mrs. Davis' },
-    { id: '4', name: 'Grade 10-A', grade: 10, section: 'A', students: 35, capacity: 40, teacher: 'Mr. Thompson' },
-    { id: '5', name: 'Grade 11-A', grade: 11, section: 'A', students: 38, capacity: 40, teacher: 'Dr. Martinez' },
-    { id: '6', name: 'Grade 12-A', grade: 12, section: 'A', students: 32, capacity: 35, teacher: 'Ms. Rodriguez' },
-  ];
+  const { data: classesData, isLoading: classesLoading } = useQuery<{ classes: Class[] }>({
+    queryKey: ['/api/classes'],
+  });
 
-  const subjects = [
-    { id: '1', name: 'Mathematics', code: 'MATH101', classes: 6, teachers: 3 },
-    { id: '2', name: 'Physics', code: 'PHY101', classes: 5, teachers: 2 },
-    { id: '3', name: 'Chemistry', code: 'CHEM101', classes: 5, teachers: 2 },
-    { id: '4', name: 'English Literature', code: 'ENG101', classes: 6, teachers: 3 },
-    { id: '5', name: 'History', code: 'HIST101', classes: 6, teachers: 2 },
-    { id: '6', name: 'Computer Science', code: 'CS101', classes: 4, teachers: 2 },
-  ];
+  const { data: subjectsData, isLoading: subjectsLoading } = useQuery<{ subjects: Subject[] }>({
+    queryKey: ['/api/subjects'],
+  });
+
+  const classes = classesData?.classes || [];
+  const subjects = subjectsData?.subjects || [];
 
   return (
     <AppLayout>
@@ -66,58 +77,58 @@ export default function Academics() {
                 </div>
               </CardHeader>
               <CardContent>
-                <DataTable
-                  data={classes}
-                  columns={[
-                    {
-                      key: 'name',
-                      header: 'Class Name',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">Grade {item.grade} - Section {item.section}</p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'students',
-                      header: 'Students',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.students}/{item.capacity}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {Math.round((item.students / item.capacity) * 100)}% filled
-                          </p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'teacher',
-                      header: 'Class Teacher',
-                      cell: (item) => <span>{item.teacher}</span>,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (item) => (
-                        <Badge variant={item.students < item.capacity ? 'default' : 'secondary'}>
-                          {item.students < item.capacity ? 'Active' : 'Full'}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      cell: () => (
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">Edit</Button>
-                          <Button variant="ghost" size="sm">View</Button>
-                        </div>
-                      ),
-                    },
-                  ]}
-                  testId="classes-table"
-                />
+                {classesLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading classes...</div>
+                ) : (
+                  <DataTable
+                    data={classes}
+                    emptyMessage="No classes found. Add a class to get started."
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Class Name',
+                        cell: (item) => (
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">Grade {item.grade} - Section {item.section}</p>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'capacity',
+                        header: 'Capacity',
+                        cell: (item) => (
+                          <div>
+                            <p className="font-medium">{item.capacity} students</p>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'academicYear',
+                        header: 'Academic Year',
+                        cell: (item) => <span>{item.academicYear}</span>,
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: () => (
+                          <Badge variant="default">Active</Badge>
+                        ),
+                      },
+                      {
+                        key: 'actions',
+                        header: 'Actions',
+                        cell: () => canManageAcademics ? (
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm">Edit</Button>
+                            <Button variant="ghost" size="sm">View</Button>
+                          </div>
+                        ) : null,
+                      },
+                    ]}
+                    testId="classes-table"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -139,42 +150,42 @@ export default function Academics() {
                 </div>
               </CardHeader>
               <CardContent>
-                <DataTable
-                  data={subjects}
-                  columns={[
-                    {
-                      key: 'subject',
-                      header: 'Subject',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground font-mono">{item.code}</p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'classes',
-                      header: 'Classes',
-                      cell: (item) => <Badge variant="outline">{item.classes} classes</Badge>,
-                    },
-                    {
-                      key: 'teachers',
-                      header: 'Teachers',
-                      cell: (item) => <span>{item.teachers} assigned</span>,
-                    },
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      cell: () => (
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">Edit</Button>
-                          <Button variant="ghost" size="sm">Assign</Button>
-                        </div>
-                      ),
-                    },
-                  ]}
-                  testId="subjects-table"
-                />
+                {subjectsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading subjects...</div>
+                ) : (
+                  <DataTable
+                    data={subjects}
+                    emptyMessage="No subjects found. Add a subject to get started."
+                    columns={[
+                      {
+                        key: 'subject',
+                        header: 'Subject',
+                        cell: (item) => (
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground font-mono">{item.code}</p>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'description',
+                        header: 'Description',
+                        cell: (item) => <span>{item.description || 'N/A'}</span>,
+                      },
+                      {
+                        key: 'actions',
+                        header: 'Actions',
+                        cell: () => canManageAcademics ? (
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm">Edit</Button>
+                            <Button variant="ghost" size="sm">Assign</Button>
+                          </div>
+                        ) : null,
+                      },
+                    ]}
+                    testId="subjects-table"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

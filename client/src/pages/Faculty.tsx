@@ -14,101 +14,146 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { z } from 'zod';
+
+const facultyFormSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  phone: z.string().optional(),
+  role: z.enum(['faculty', 'principal']).default('faculty'),
+});
+
+type FacultyFormData = z.infer<typeof facultyFormSchema>;
+
+interface FacultyMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  avatar?: string;
+  active: boolean;
+  createdAt: Date;
+}
 
 export default function Faculty() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedFaculty, setSelectedFaculty] = useState<any>(null);
+  const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
 
   const canManageFaculty = user && ['admin', 'principal'].includes(user.role);
 
-  const facultyMembers = [
-    {
-      id: '1',
-      name: 'Ms. Anderson',
-      email: 'teacher@school.com',
-      phone: '+1-555-0103',
-      department: 'Mathematics',
-      subjects: ['Mathematics', 'Statistics'],
-      qualification: 'M.Sc Mathematics',
-      experience: '10 years',
-      status: 'active',
-      joiningDate: '2015-06-01',
-    },
-    {
-      id: '2',
-      name: 'Dr. Williams',
-      email: 'dwilliams@school.com',
-      phone: '+1-555-0201',
-      department: 'Science',
-      subjects: ['Physics', 'Chemistry'],
-      qualification: 'Ph.D. Physics',
-      experience: '15 years',
-      status: 'active',
-      joiningDate: '2010-04-15',
-    },
-    {
-      id: '3',
-      name: 'Mr. Johnson',
-      email: 'mjohnson@school.com',
-      phone: '+1-555-0202',
-      department: 'English',
-      subjects: ['English Literature', 'Grammar'],
-      qualification: 'M.A. English',
-      experience: '8 years',
-      status: 'active',
-      joiningDate: '2017-08-01',
-    },
-    {
-      id: '4',
-      name: 'Mrs. Brown',
-      email: 'sbrown@school.com',
-      phone: '+1-555-0203',
-      department: 'Computer Science',
-      subjects: ['Computer Science', 'Programming'],
-      qualification: 'M.Tech CS',
-      experience: '12 years',
-      status: 'active',
-      joiningDate: '2013-07-10',
-    },
-  ];
-
-  const filteredFaculty = facultyMembers.filter(faculty => {
-    const matchesSearch = searchQuery === '' || 
-      faculty.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faculty.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faculty.department.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesDepartment = departmentFilter === 'all' || faculty.department === departmentFilter;
-    
-    return matchesSearch && matchesDepartment;
+  const { data, isLoading } = useQuery<{ faculty: FacultyMember[] }>({
+    queryKey: ['/api/faculty'],
   });
 
-  const handleAddFaculty = () => {
-    toast({
-      title: 'Faculty Added',
-      description: 'New faculty member has been added successfully.',
-    });
-    setIsAddDialogOpen(false);
-  };
+  const facultyMembers = data?.faculty || [];
 
-  const handleEditFaculty = (faculty: any) => {
-    setSelectedFaculty(faculty);
-    toast({
-      title: 'Edit Faculty',
-      description: `Editing details for ${faculty.name}`,
-    });
+  const form = useForm<FacultyFormData>({
+    resolver: zodResolver(facultyFormSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      phone: '',
+      role: 'faculty',
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (data: FacultyFormData) => apiRequest('/api/faculty', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/faculty'] });
+      toast({
+        title: 'Faculty Added',
+        description: 'New faculty member has been added successfully.',
+      });
+      setIsAddDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add faculty member',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<FacultyFormData> }) =>
+      apiRequest(`/api/faculty/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/faculty'] });
+      toast({
+        title: 'Faculty Updated',
+        description: 'Faculty member has been updated successfully.',
+      });
+      setSelectedFaculty(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update faculty member',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/faculty/${id}`, {
+      method: 'DELETE',
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/faculty'] });
+      toast({
+        title: 'Faculty Removed',
+        description: 'Faculty member has been removed from the system.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete faculty member',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const filteredFaculty = facultyMembers.filter((faculty: any) => {
+    const matchesSearch = searchQuery === '' || 
+      faculty.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      faculty.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = roleFilter === 'all' || faculty.role === roleFilter;
+    
+    return matchesSearch && matchesRole;
+  });
+
+  const onSubmit = (data: FacultyFormData) => {
+    addMutation.mutate(data);
   };
 
   const handleDeleteFaculty = (faculty: any) => {
-    toast({
-      title: 'Faculty Removed',
-      description: `${faculty.name} has been removed from the system.`,
-      variant: 'destructive',
-    });
+    if (confirm(`Are you sure you want to remove ${faculty.name}?`)) {
+      deleteMutation.mutate(faculty.id);
+    }
   };
 
   return (
@@ -139,55 +184,118 @@ export default function Faculty() {
                     <DialogTitle>Add New Faculty Member</DialogTitle>
                     <DialogDescription>Enter the details of the new faculty member</DialogDescription>
                   </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" placeholder="John" data-testid="input-first-name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" placeholder="Doe" data-testid="input-last-name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="john.doe@school.com" data-testid="input-email" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" placeholder="+1-555-0000" data-testid="input-phone" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="department">Department</Label>
-                      <Select>
-                        <SelectTrigger data-testid="select-department">
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mathematics">Mathematics</SelectItem>
-                          <SelectItem value="science">Science</SelectItem>
-                          <SelectItem value="english">English</SelectItem>
-                          <SelectItem value="computer-science">Computer Science</SelectItem>
-                          <SelectItem value="social-studies">Social Studies</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="qualification">Qualification</Label>
-                      <Input id="qualification" placeholder="M.Sc, Ph.D, etc." data-testid="input-qualification" />
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="subjects">Subjects (comma separated)</Label>
-                      <Input id="subjects" placeholder="Mathematics, Statistics" data-testid="input-subjects" />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddFaculty} data-testid="button-save-faculty">
-                      Add Faculty
-                    </Button>
-                  </DialogFooter>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="firstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="John" data-testid="input-first-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="lastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Doe" data-testid="input-last-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="email" placeholder="john.doe@school.com" data-testid="input-email" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input {...field} type="password" placeholder="••••••" data-testid="input-password" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="+1-555-0000" data-testid="input-phone" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="role"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Role</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-role">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="faculty">Faculty</SelectItem>
+                                  <SelectItem value="principal">Principal</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsAddDialogOpen(false);
+                            form.reset();
+                          }}
+                          data-testid="button-cancel"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={addMutation.isPending}
+                          data-testid="button-save-faculty"
+                        >
+                          {addMutation.isPending ? 'Adding...' : 'Add Faculty'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
                 </DialogContent>
               </Dialog>
             )}
@@ -203,101 +311,99 @@ export default function Faculty() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search by name, email, or department..."
+                  placeholder="Search by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                   data-testid="input-search-faculty"
                 />
               </div>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger className="w-48" data-testid="select-department-filter">
-                  <SelectValue placeholder="All Departments" />
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-48" data-testid="select-role-filter">
+                  <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  <SelectItem value="Science">Science</SelectItem>
-                  <SelectItem value="English">English</SelectItem>
-                  <SelectItem value="Computer Science">Computer Science</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                  <SelectItem value="principal">Principal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <DataTable
-              data={filteredFaculty}
-              emptyMessage="No faculty members found"
-              columns={[
-                {
-                  key: 'name',
-                  header: 'Faculty Member',
-                  cell: (item) => (
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>{item.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.email}</p>
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading faculty members...</div>
+            ) : (
+              <DataTable
+                data={filteredFaculty}
+                emptyMessage="No faculty members found"
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Faculty Member',
+                    cell: (item) => (
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={item.avatar} />
+                          <AvatarFallback>{item.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">{item.email}</p>
+                        </div>
                       </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'department',
-                  header: 'Department',
-                  cell: (item) => (
-                    <div>
-                      <p className="font-medium">{item.department}</p>
-                      <p className="text-sm text-muted-foreground">{item.subjects.join(', ')}</p>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'qualification',
-                  header: 'Qualification',
-                  cell: (item) => item.qualification,
-                },
-                {
-                  key: 'experience',
-                  header: 'Experience',
-                  cell: (item) => item.experience,
-                },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (item) => (
-                    <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                      {item.status}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'actions',
-                  header: 'Actions',
-                  cell: (item) => canManageFaculty ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditFaculty(item)}
-                        data-testid={`button-edit-faculty-${item.id}`}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteFaculty(item)}
-                        data-testid={`button-delete-faculty-${item.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ) : null,
-                },
-              ]}
-            />
+                    ),
+                  },
+                  {
+                    key: 'role',
+                    header: 'Role',
+                    cell: (item) => (
+                      <Badge variant={item.role === 'principal' ? 'default' : 'secondary'}>
+                        {item.role === 'principal' ? 'Principal' : 'Faculty'}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'phone',
+                    header: 'Phone',
+                    cell: (item) => item.phone || 'N/A',
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (item) => (
+                      <Badge variant={item.active ? 'default' : 'secondary'}>
+                        {item.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Actions',
+                    cell: (item) => canManageFaculty ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFaculty(item)}
+                          data-testid={`button-edit-faculty-${item.id}`}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteFaculty(item)}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`button-delete-faculty-${item.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : null,
+                  },
+                ]}
+              />
+            )}
           </CardContent>
         </Card>
       </div>

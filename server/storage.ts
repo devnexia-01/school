@@ -124,8 +124,8 @@ export interface IStorage {
   
   // Faculty Management
   getFacultyByTenant(tenantId: string): Promise<any[]>;
-  updateUser(userId: string, userData: Partial<InsertUser>): Promise<User>;
-  deleteUser(userId: string): Promise<void>;
+  updateUser(userId: string, tenantId: string, userData: Partial<InsertUser>): Promise<User>;
+  deleteUser(userId: string, tenantId: string): Promise<void>;
 }
 
 function toPlainObject(doc: any): any {
@@ -806,22 +806,26 @@ export class DatabaseStorage implements IStorage {
     }));
   }
   
-  async updateUser(userId: string, userData: Partial<InsertUser>): Promise<User> {
-    const user = await UserModel.findByIdAndUpdate(
-      userId,
+  async updateUser(userId: string, tenantId: string, userData: Partial<InsertUser>): Promise<User> {
+    const user = await UserModel.findOneAndUpdate(
+      { _id: userId, tenantId },
       userData,
       { new: true }
     ).lean();
     
     if (!user) {
-      throw new Error('User not found');
+      throw new Error('User not found or access denied');
     }
     
     return toPlainObject(user);
   }
   
-  async deleteUser(userId: string): Promise<void> {
-    await UserModel.findByIdAndDelete(userId);
+  async deleteUser(userId: string, tenantId: string): Promise<void> {
+    const result = await UserModel.findOneAndDelete({ _id: userId, tenantId });
+    
+    if (!result) {
+      throw new Error('User not found or access denied');
+    }
   }
 }
 

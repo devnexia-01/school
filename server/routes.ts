@@ -236,16 +236,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+  app.patch('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
+      const tenantId = req.tenantId!;
       const updateData = req.body;
       
       if (updateData.password) {
         updateData.password = await bcrypt.hash(updateData.password, 10);
       }
 
-      const user = await storage.updateUser(id, updateData);
+      const user = await storage.updateUser(id, tenantId, updateData);
       res.json({ user });
     } catch (error) {
       console.error('Update faculty error:', error);
@@ -253,10 +254,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+  app.delete('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
-      await storage.deleteUser(id);
+      const tenantId = req.tenantId!;
+      await storage.deleteUser(id, tenantId);
       res.json({ success: true });
     } catch (error) {
       console.error('Delete faculty error:', error);
