@@ -200,6 +200,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Faculty Routes ============
+  app.get('/api/faculty', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const faculty = await storage.getFacultyByTenant(tenantId);
+      res.json({ faculty });
+    } catch (error) {
+      console.error('Get faculty error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/faculty', authenticateToken, requireRole(['admin', 'principal']), tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { email, password, firstName, lastName, phone, role } = req.body;
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await storage.createUser({
+        tenantId,
+        email,
+        password: hashedPassword,
+        role: role || 'faculty',
+        firstName,
+        lastName,
+        phone,
+        active: true,
+      });
+
+      res.status(201).json({ user });
+    } catch (error) {
+      console.error('Create faculty error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      if (updateData.password) {
+        updateData.password = await bcrypt.hash(updateData.password, 10);
+      }
+
+      const user = await storage.updateUser(id, updateData);
+      res.json({ user });
+    } catch (error) {
+      console.error('Update faculty error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/faculty/:id', authenticateToken, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete faculty error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Students Routes ============
   app.get('/api/students', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {

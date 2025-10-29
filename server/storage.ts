@@ -121,6 +121,11 @@ export interface IStorage {
   getPerformanceData(tenantId: string): Promise<any[]>;
   getClassDistribution(tenantId: string): Promise<any[]>;
   getFeeCollectionStats(tenantId: string, months?: number): Promise<any>;
+  
+  // Faculty Management
+  getFacultyByTenant(tenantId: string): Promise<any[]>;
+  updateUser(userId: string, userData: Partial<InsertUser>): Promise<User>;
+  deleteUser(userId: string): Promise<void>;
 }
 
 function toPlainObject(doc: any): any {
@@ -776,6 +781,47 @@ export class DatabaseStorage implements IStorage {
       collected: collectedTotal,
       pending: pendingTotal
     };
+  }
+  
+  // Faculty Management
+  async getFacultyByTenant(tenantId: string): Promise<any[]> {
+    const faculty = await UserModel.find({ 
+      tenantId, 
+      role: { $in: ['faculty', 'principal'] },
+      active: true
+    })
+    .populate('tenantId', 'name')
+    .sort({ firstName: 1 })
+    .lean();
+    
+    return faculty.map(user => ({
+      id: user._id.toString(),
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role,
+      avatar: user.avatar,
+      active: user.active,
+      createdAt: user.createdAt
+    }));
+  }
+  
+  async updateUser(userId: string, userData: Partial<InsertUser>): Promise<User> {
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      userData,
+      { new: true }
+    ).lean();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return toPlainObject(user);
+  }
+  
+  async deleteUser(userId: string): Promise<void> {
+    await UserModel.findByIdAndDelete(userId);
   }
 }
 
