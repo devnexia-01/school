@@ -3,7 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Bell, MessageSquare } from 'lucide-react';
+import { Plus, Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 
@@ -16,12 +16,6 @@ export default function Communication() {
   });
 
   const announcements = announcementsData?.announcements || [];
-
-  const messages = [
-    { id: '1', from: 'Mrs. Johnson (Parent)', subject: 'Question about homework assignment', preview: 'I have a question regarding the mathematics homework...', time: '2 hours ago', unread: true },
-    { id: '2', from: 'Principal', subject: 'Faculty meeting on Monday', preview: 'There will be a faculty meeting on Monday at 10 AM...', time: '5 hours ago', unread: true },
-    { id: '3', from: 'Admin', subject: 'Updated exam schedule', preview: 'Please find attached the updated examination schedule...', time: '1 day ago', unread: false },
-  ];
 
   return (
     <AppLayout>
@@ -41,24 +35,23 @@ export default function Communication() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                <CardTitle>Announcements</CardTitle>
-              </div>
-              <CardDescription>School-wide notifications and updates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {announcementsLoading ? (
-                <div className="text-center text-muted-foreground p-4">Loading announcements...</div>
-              ) : announcements.length === 0 ? (
-                <div className="text-center text-muted-foreground p-4">No announcements available</div>
-              ) : (
-                <div className="space-y-4">
-                  {announcements.map((announcement) => (
-                  <div key={announcement.id} className="p-4 rounded-lg hover-elevate border" data-testid={`announcement-${announcement.id}`}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              <CardTitle>Announcements</CardTitle>
+            </div>
+            <CardDescription>School-wide notifications and updates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {announcementsLoading ? (
+              <div className="text-center text-muted-foreground p-4">Loading announcements...</div>
+            ) : announcements.length === 0 ? (
+              <div className="text-center text-muted-foreground p-4">No announcements available</div>
+            ) : (
+              <div className="space-y-4">
+                {announcements.map((announcement) => (
+                  <div key={announcement._id} className="p-4 rounded-lg hover-elevate border" data-testid={`announcement-${announcement._id}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${
@@ -69,60 +62,22 @@ export default function Communication() {
                         <h3 className="font-medium">{announcement.title}</h3>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {announcement.priority}
+                        {announcement.priority || 'normal'}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">
                       {announcement.content}
                     </p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>By {announcement.author}</span>
-                      <span>{announcement.date}</span>
+                      <span>By {announcement.publishedBy?.firstName || 'Admin'}</span>
+                      <span>{new Date(announcement.publishedAt).toLocaleDateString()}</span>
                     </div>
-                  </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                <CardTitle>Messages</CardTitle>
-              </div>
-              <CardDescription>Your conversations and messages</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`p-4 rounded-lg hover-elevate border cursor-pointer ${message.unread ? 'bg-primary/5 border-primary/20' : ''}`}
-                    data-testid={`message-${message.id}`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{message.from}</p>
-                          {message.unread && (
-                            <div className="h-2 w-2 rounded-full bg-primary" />
-                          )}
-                        </div>
-                        <p className="text-sm font-medium">{message.subject}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {message.preview}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{message.time}</p>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

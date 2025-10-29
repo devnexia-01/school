@@ -497,6 +497,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ Fee Payments Routes ============
+  app.get('/api/fee-payments', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const payments = await storage.getFeePaymentsByTenant(tenantId, limit);
+      res.json({ payments });
+    } catch (error) {
+      console.error('Get fee payments error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/fee-payments/student/:studentId', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;

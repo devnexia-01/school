@@ -86,6 +86,7 @@ export interface IStorage {
   
   // Fee Payments
   getFeePaymentsByStudent(studentId: string, tenantId: string): Promise<FeePayment[]>;
+  getFeePaymentsByTenant(tenantId: string, limit?: number): Promise<any[]>;
   createFeePayment(payment: InsertFeePayment): Promise<FeePayment>;
   
   // Announcements
@@ -320,6 +321,31 @@ export class DatabaseStorage implements IStorage {
   async getFeePaymentsByStudent(studentId: string, tenantId: string): Promise<FeePayment[]> {
     const payments = await FeePaymentModel.find({ studentId, tenantId }).lean();
     return payments.map(toPlainObject);
+  }
+
+  async getFeePaymentsByTenant(tenantId: string, limit: number = 50): Promise<any[]> {
+    const payments = await FeePaymentModel.find({ tenantId })
+      .populate('studentId', 'userId')
+      .sort({ paymentDate: -1 })
+      .limit(limit)
+      .lean();
+    
+    const paymentsWithDetails = await Promise.all(
+      payments.map(async (payment) => {
+        const student = await StudentModel.findById(payment.studentId).populate('userId', 'firstName lastName').populate('classId', 'name').lean();
+        return {
+          id: payment._id.toString(),
+          student: student ? `${(student.userId as any)?.firstName} ${(student.userId as any)?.lastName}` : 'Unknown',
+          class: student ? (student.classId as any)?.name || 'N/A' : 'N/A',
+          amount: payment.amount,
+          status: payment.status,
+          date: payment.paymentDate.toISOString().split('T')[0],
+          receipt: payment.receiptNumber || '',
+        };
+      })
+    );
+    
+    return paymentsWithDetails;
   }
 
   async createFeePayment(insertPayment: InsertFeePayment): Promise<FeePayment> {
