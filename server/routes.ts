@@ -88,6 +88,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/dashboard/superadmin/stats', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
+    try {
+      const [totalSchools, totalUsers, totalMRR] = await Promise.all([
+        storage.getTotalTenantsCount(),
+        storage.getTotalUsersCount(),
+        storage.getTotalMRR(),
+      ]);
+      
+      res.json({
+        totalSchools,
+        totalUsers,
+        totalMRR,
+      });
+    } catch (error) {
+      console.error('SuperAdmin dashboard stats error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/tenants/with-stats', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
+    try {
+      const tenants = await storage.getTenantsWithStats();
+      res.json({ tenants });
+    } catch (error) {
+      console.error('Get tenants with stats error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/dashboard/admin/recent-admissions', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const admissions = await storage.getRecentAdmissions(tenantId, limit);
+      res.json({ admissions });
+    } catch (error) {
+      console.error('Recent admissions error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/dashboard/admin/fee-collection-trends', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const months = req.query.months ? parseInt(req.query.months as string) : 6;
+      const trends = await storage.getFeeCollectionTrends(tenantId, months);
+      res.json({ trends });
+    } catch (error) {
+      console.error('Fee collection trends error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/dashboard/admin/recent-activities', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const activities = await storage.getRecentActivities(tenantId, limit);
+      res.json({ activities });
+    } catch (error) {
+      console.error('Recent activities error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Reports Routes ============
+  app.get('/api/reports/attendance', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const months = req.query.months ? parseInt(req.query.months as string) : 6;
+      const data = await storage.getAttendanceStats(tenantId, months);
+      res.json({ data });
+    } catch (error) {
+      console.error('Attendance stats error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/reports/performance', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const data = await storage.getPerformanceData(tenantId);
+      res.json({ data });
+    } catch (error) {
+      console.error('Performance data error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/reports/class-distribution', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const data = await storage.getClassDistribution(tenantId);
+      res.json({ data });
+    } catch (error) {
+      console.error('Class distribution error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/reports/fee-collection', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const months = req.query.months ? parseInt(req.query.months as string) : 6;
+      const data = await storage.getFeeCollectionStats(tenantId, months);
+      res.json(data);
+    } catch (error) {
+      console.error('Fee collection stats error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Students Routes ============
   app.get('/api/students', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {

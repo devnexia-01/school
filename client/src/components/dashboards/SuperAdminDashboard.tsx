@@ -23,7 +23,15 @@ export function SuperAdminDashboard() {
   const { toast } = useToast();
 
   const { data: tenantsData, isLoading } = useQuery<{ tenants: Array<any> }>({
-    queryKey: ['/api/tenants'],
+    queryKey: ['/api/tenants/with-stats'],
+  });
+
+  const { data: stats, isLoading: isStatsLoading } = useQuery<{
+    totalSchools: number;
+    totalUsers: number;
+    totalMRR: number;
+  }>({
+    queryKey: ['/api/dashboard/superadmin/stats'],
   });
 
   const createSchoolMutation = useMutation({
@@ -77,10 +85,10 @@ export function SuperAdminDashboard() {
   const schools = (tenantsData?.tenants || []).map(tenant => ({
     id: tenant.id,
     name: tenant.name,
-    students: 0,
-    plan: 'Standard',
-    status: tenant.active ? 'active' : 'inactive',
-    revenue: formatCurrencyINR(0),
+    students: tenant.students || 0,
+    plan: tenant.plan || 'Standard',
+    status: tenant.status || 'active',
+    revenue: formatCurrencyINR(tenant.revenue || 0),
   }));
 
   return (
@@ -172,30 +180,26 @@ export function SuperAdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Schools"
-          value="24"
+          value={isStatsLoading ? '...' : (stats?.totalSchools?.toString() || '0')}
           icon={Building2}
-          trend={{ value: 12.5, label: 'vs last month', isPositive: true }}
           testId="stat-total-schools"
         />
         <StatCard
           title="Total Users"
-          value="15,248"
+          value={isStatsLoading ? '...' : (stats?.totalUsers?.toString() || '0')}
           icon={Users}
-          trend={{ value: 8.2, label: 'vs last month', isPositive: true }}
           testId="stat-total-users"
         />
         <StatCard
           title="MRR"
-          value={formatCurrencyINR(42850)}
+          value={isStatsLoading ? '...' : (stats?.totalMRR ? formatCurrencyINR(stats.totalMRR) : formatCurrencyINR(0))}
           icon={IndianRupee}
-          trend={{ value: 15.3, label: 'vs last month', isPositive: true }}
           testId="stat-mrr"
         />
         <StatCard
-          title="Growth Rate"
-          value="18.4%"
+          title="Total Revenue"
+          value={isStatsLoading ? '...' : (stats?.totalMRR ? formatCurrencyINR(stats.totalMRR) : formatCurrencyINR(0))}
           icon={TrendingUp}
-          trend={{ value: 2.1, label: 'vs last month', isPositive: true }}
           testId="stat-growth-rate"
         />
       </div>

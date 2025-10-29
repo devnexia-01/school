@@ -104,6 +104,23 @@ export interface IStorage {
   getFacultyCount(tenantId: string): Promise<number>;
   getMonthlyRevenue(tenantId: string): Promise<number>;
   getPendingFees(tenantId: string): Promise<number>;
+  
+  // SuperAdmin Dashboard Stats
+  getTotalUsersCount(): Promise<number>;
+  getTotalTenantsCount(): Promise<number>;
+  getTotalMRR(): Promise<number>;
+  getTenantsWithStats(): Promise<any[]>;
+  
+  // Admin Dashboard Data
+  getRecentAdmissions(tenantId: string, limit?: number): Promise<any[]>;
+  getFeeCollectionTrends(tenantId: string, months?: number): Promise<any[]>;
+  getRecentActivities(tenantId: string, limit?: number): Promise<any[]>;
+  
+  // Reports Data
+  getAttendanceStats(tenantId: string, months?: number): Promise<any[]>;
+  getPerformanceData(tenantId: string): Promise<any[]>;
+  getClassDistribution(tenantId: string): Promise<any[]>;
+  getFeeCollectionStats(tenantId: string, months?: number): Promise<any>;
 }
 
 function toPlainObject(doc: any): any {
@@ -410,6 +427,355 @@ export class DatabaseStorage implements IStorage {
     ]);
     
     return result.length > 0 ? result[0].total : 0;
+  }
+  
+  // SuperAdmin Dashboard Stats
+  async getTotalUsersCount(): Promise<number> {
+    return await UserModel.countDocuments();
+  }
+  
+  async getTotalTenantsCount(): Promise<number> {
+    return await TenantModel.countDocuments();
+  }
+  
+  async getTotalMRR(): Promise<number> {
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+    
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
+    const result = await FeePaymentModel.aggregate([
+      {
+        $match: {
+          paymentDate: { $gte: currentMonth, $lt: nextMonth },
+          status: 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+    
+    return result.length > 0 ? result[0].total : 0;
+  }
+  
+  async getTenantsWithStats(): Promise<any[]> {
+    const tenants = await TenantModel.find().lean();
+    
+    const tenantsWithStats = await Promise.all(
+      tenants.map(async (tenant) => {
+        const tenantId = tenant._id.toString();
+        const [studentCount, monthlyRevenue] = await Promise.all([
+          StudentModel.countDocuments({ tenantId }),
+          this.getMonthlyRevenue(tenantId)
+        ]);
+        
+        return {
+          id: tenantId,
+          name: tenant.name,
+          students: studentCount,
+          plan: 'Standard',
+          status: tenant.active ? 'active' : 'inactive',
+          revenue: monthlyRevenue,
+        };
+      })
+    );
+    
+    return tenantsWithStats;
+  }
+  
+  // Admin Dashboard Data
+  async getRecentAdmissions(tenantId: string, limit: number = 5): Promise<any[]> {
+    const students = await StudentModel.find({ tenantId })
+      .populate('userId', 'firstName lastName email phone active')
+      .populate('classId', 'name')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    
+    return students.map(student => {
+      const user = student.userId as any;
+      const classInfo = student.classId as any;
+      
+      return {
+        id: student._id.toString(),
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+        class: classInfo ? classInfo.name : 'Not assigned',
+        admissionDate: student.createdAt ? new Date(student.createdAt).toISOString().split('T')[0] : '',
+        status: user?.active ? 'active' : 'inactive',
+      };
+    });
+  }
+  
+  async getFeeCollectionTrends(tenantId: string, months: number = 6): Promise<any[]> {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const trends: any[] = [];
+    
+    for (let i = 0; i < months; i++) {
+      const monthStart = new Date();
+      monthStart.setMonth(monthStart.getMonth() - (months - 1 - i));
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      
+      const result = await FeePaymentModel.aggregate([
+        {
+          $match: {
+            tenantId: tenantId as any,
+            paymentDate: { $gte: monthStart, $lt: monthEnd }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            amount: { $sum: '$amount' }
+          }
+        }
+      ]);
+      
+      trends.push({
+        month: monthNames[monthStart.getMonth()],
+        amount: result.length > 0 ? result[0].amount : 0
+      });
+    }
+    
+    return trends;
+  }
+  
+  async getRecentActivities(tenantId: string, limit: number = 5): Promise<any[]> {
+    const activities: any[] = [];
+    
+    const recentAnnouncements = await AnnouncementModel.find({ tenantId })
+      .sort({ publishedAt: -1 })
+      .limit(limit)
+      .lean();
+    
+    for (const announcement of recentAnnouncements) {
+      activities.push({
+        id: announcement._id.toString(),
+        action: 'New announcement posted',
+        user: 'Admin',
+        time: this.getRelativeTime(announcement.publishedAt)
+      });
+    }
+    
+    const recentPayments = await FeePaymentModel.find({ tenantId, status: 'paid' })
+      .populate('studentId', 'userId')
+      .sort({ paymentDate: -1 })
+      .limit(2)
+      .lean();
+    
+    for (const payment of recentPayments) {
+      activities.push({
+        id: payment._id.toString(),
+        action: 'Fee payment received',
+        user: 'Student',
+        time: this.getRelativeTime(payment.paymentDate)
+      });
+    }
+    
+    return activities.slice(0, limit);
+  }
+  
+  private getRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - new Date(date).getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays === 1) return '1 day ago';
+    return `${diffDays} days ago`;
+  }
+  
+  // Reports Data
+  async getAttendanceStats(tenantId: string, months: number = 6): Promise<any[]> {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const stats: any[] = [];
+    
+    for (let i = 0; i < months; i++) {
+      const monthStart = new Date();
+      monthStart.setMonth(monthStart.getMonth() - (months - 1 - i));
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      
+      const result = await AttendanceModel.aggregate([
+        {
+          $match: {
+            tenantId: tenantId as any,
+            date: { $gte: monthStart, $lt: monthEnd }
+          }
+        },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      const present = result.find(r => r._id === 'present')?.count || 0;
+      const absent = result.find(r => r._id === 'absent')?.count || 0;
+      const total = present + absent;
+      
+      stats.push({
+        month: monthNames[monthStart.getMonth()],
+        present: total > 0 ? Math.round((present / total) * 100) : 0,
+        absent: total > 0 ? Math.round((absent / total) * 100) : 0
+      });
+    }
+    
+    return stats;
+  }
+  
+  async getPerformanceData(tenantId: string): Promise<any[]> {
+    const results = await ExamResultModel.aggregate([
+      {
+        $match: {
+          tenantId: tenantId as any
+        }
+      },
+      {
+        $lookup: {
+          from: 'exams',
+          localField: 'examId',
+          foreignField: '_id',
+          as: 'exam'
+        }
+      },
+      {
+        $unwind: '$exam'
+      },
+      {
+        $group: {
+          _id: '$exam.subject',
+          avgMarks: { $avg: '$marksObtained' }
+        }
+      }
+    ]);
+    
+    const subjects = await SubjectModel.find({ tenantId }).lean();
+    
+    return subjects.map(subject => {
+      const subjectResult = results.find(r => r._id?.toString() === subject._id.toString());
+      return {
+        subject: subject.name,
+        average: subjectResult ? Math.round(subjectResult.avgMarks) : 0
+      };
+    });
+  }
+  
+  async getClassDistribution(tenantId: string): Promise<any[]> {
+    const distribution = await StudentModel.aggregate([
+      {
+        $match: {
+          tenantId: tenantId as any
+        }
+      },
+      {
+        $lookup: {
+          from: 'classes',
+          localField: 'classId',
+          foreignField: '_id',
+          as: 'class'
+        }
+      },
+      {
+        $unwind: '$class'
+      },
+      {
+        $group: {
+          _id: '$class.name',
+          value: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+    
+    return distribution.map(item => ({
+      name: item._id,
+      value: item.value
+    }));
+  }
+  
+  async getFeeCollectionStats(tenantId: string, months: number = 6): Promise<any> {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const trends: any[] = [];
+    
+    for (let i = 0; i < months; i++) {
+      const monthStart = new Date();
+      monthStart.setMonth(monthStart.getMonth() - (months - 1 - i));
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      
+      const result = await FeePaymentModel.aggregate([
+        {
+          $match: {
+            tenantId: tenantId as any,
+            paymentDate: { $gte: monthStart, $lt: monthEnd }
+          }
+        },
+        {
+          $group: {
+            _id: '$status',
+            amount: { $sum: '$amount' }
+          }
+        }
+      ]);
+      
+      const collected = result.find(r => r._id === 'paid')?.amount || 0;
+      const pending = result.filter(r => r._id !== 'paid').reduce((sum, r) => sum + r.amount, 0);
+      
+      trends.push({
+        month: monthNames[monthStart.getMonth()],
+        collected,
+        pending
+      });
+    }
+    
+    const totalRevenue = await FeePaymentModel.aggregate([
+      {
+        $match: {
+          tenantId: tenantId as any
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          amount: { $sum: '$amount' }
+        }
+      }
+    ]);
+    
+    const collectedTotal = totalRevenue.find(r => r._id === 'paid')?.amount || 0;
+    const pendingTotal = totalRevenue.filter(r => r._id !== 'paid').reduce((sum, r) => sum + r.amount, 0);
+    
+    return {
+      trends,
+      totalRevenue: collectedTotal + pendingTotal,
+      collected: collectedTotal,
+      pending: pendingTotal
+    };
   }
 }
 

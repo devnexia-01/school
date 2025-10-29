@@ -9,43 +9,50 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, C
 import { useAuth } from '@/lib/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrencyINR } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Reports() {
   const { user } = useAuth();
 
-  const attendanceData = [
-    { month: 'Jan', present: 92, absent: 8 },
-    { month: 'Feb', present: 90, absent: 10 },
-    { month: 'Mar', present: 94, absent: 6 },
-    { month: 'Apr', present: 88, absent: 12 },
-    { month: 'May', present: 91, absent: 9 },
-    { month: 'Jun', present: 93, absent: 7 },
-  ];
+  const { data: stats } = useQuery<{
+    totalStudents: number;
+    totalFaculty: number;
+    monthlyRevenue: number;
+    pendingFees: number;
+  }>({
+    queryKey: ['/api/dashboard/admin/stats'],
+  });
 
-  const performanceData = [
-    { subject: 'Math', average: 85 },
-    { subject: 'Science', average: 78 },
-    { subject: 'English', average: 82 },
-    { subject: 'History', average: 76 },
-    { subject: 'Computer', average: 88 },
-  ];
+  const { data: attendanceResponse, isLoading: isAttendanceLoading } = useQuery<{ data: Array<any> }>({
+    queryKey: ['/api/reports/attendance'],
+  });
 
-  const feeCollectionData = [
-    { month: 'Jan', collected: 45000, pending: 15000 },
-    { month: 'Feb', collected: 48000, pending: 12000 },
-    { month: 'Mar', collected: 52000, pending: 8000 },
-    { month: 'Apr', collected: 50000, pending: 10000 },
-    { month: 'May', collected: 55000, pending: 5000 },
-    { month: 'Jun', collected: 58000, pending: 2000 },
-  ];
+  const { data: performanceResponse, isLoading: isPerformanceLoading } = useQuery<{ data: Array<any> }>({
+    queryKey: ['/api/reports/performance'],
+  });
 
-  const classDistribution = [
-    { name: 'Grade 8', value: 120 },
-    { name: 'Grade 9', value: 135 },
-    { name: 'Grade 10', value: 142 },
-    { name: 'Grade 11', value: 118 },
-    { name: 'Grade 12', value: 95 },
-  ];
+  const { data: classDistResponse, isLoading: isClassDistLoading } = useQuery<{ data: Array<any> }>({
+    queryKey: ['/api/reports/class-distribution'],
+  });
+
+  const { data: feeCollectionResponse, isLoading: isFeeCollectionLoading } = useQuery<{
+    trends: Array<any>;
+    totalRevenue: number;
+    collected: number;
+    pending: number;
+  }>({
+    queryKey: ['/api/reports/fee-collection'],
+  });
+
+  const attendanceData = attendanceResponse?.data || [];
+  const performanceData = performanceResponse?.data || [];
+  const classDistribution = classDistResponse?.data || [];
+  const feeCollectionData = feeCollectionResponse?.trends || [];
+  const feeStats = {
+    totalRevenue: feeCollectionResponse?.totalRevenue || 0,
+    collected: feeCollectionResponse?.collected || 0,
+    pending: feeCollectionResponse?.pending || 0,
+  };
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -80,27 +87,23 @@ export default function Reports() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             title="Total Students"
-            value="610"
+            value={stats?.totalStudents?.toString() || '0'}
             icon={GraduationCap}
-            trend={{ value: 8.2, label: 'vs last year', isPositive: true }}
           />
           <StatCard
             title="Faculty Members"
-            value="45"
+            value={stats?.totalFaculty?.toString() || '0'}
             icon={Users}
-            trend={{ value: 12.5, label: 'vs last year', isPositive: true }}
           />
           <StatCard
             title="Avg. Attendance"
-            value="92.3%"
+            value={attendanceData.length > 0 ? `${Math.round(attendanceData.reduce((sum: number, d: any) => sum + d.present, 0) / attendanceData.length)}%` : '0%'}
             icon={ClipboardCheck}
-            trend={{ value: 2.1, label: 'vs last month', isPositive: true }}
           />
           <StatCard
-            title="Fee Collection"
-            value="95.8%"
+            title="Monthly Revenue"
+            value={stats?.monthlyRevenue ? formatCurrencyINR(stats.monthlyRevenue) : formatCurrencyINR(0)}
             icon={IndianRupee}
-            trend={{ value: 4.3, label: 'vs last month', isPositive: true }}
           />
         </div>
 
@@ -127,12 +130,12 @@ export default function Reports() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={(entry) => `${entry.name}: ${entry.value}`}
+                        label={(entry: any) => `${entry.name}: ${entry.value}`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {classDistribution.map((entry, index) => (
+                        {classDistribution.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -324,15 +327,15 @@ export default function Reports() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span>Total Revenue</span>
-                      <span className="font-bold text-green-600">{formatCurrencyINR(308000)}</span>
+                      <span className="font-bold text-green-600">{formatCurrencyINR(feeStats.totalRevenue)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Collected</span>
-                      <span className="font-bold">{formatCurrencyINR(295200)}</span>
+                      <span className="font-bold">{formatCurrencyINR(feeStats.collected)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>Pending</span>
-                      <span className="font-bold text-orange-600">{formatCurrencyINR(12800)}</span>
+                      <span className="font-bold text-orange-600">{formatCurrencyINR(feeStats.pending)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -340,21 +343,25 @@ export default function Reports() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Expense Breakdown</CardTitle>
+                  <CardTitle>Payment Status</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span>Salaries</span>
-                      <span className="font-bold">{formatCurrencyINR(180000)}</span>
+                      <span>Collection Rate</span>
+                      <span className="font-bold text-green-600">
+                        {feeStats.totalRevenue > 0 
+                          ? `${Math.round((feeStats.collected / feeStats.totalRevenue) * 100)}%`
+                          : '0%'}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Infrastructure</span>
-                      <span className="font-bold">{formatCurrencyINR(45000)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Utilities</span>
-                      <span className="font-bold">{formatCurrencyINR(18000)}</span>
+                      <span>Pending Rate</span>
+                      <span className="font-bold text-orange-600">
+                        {feeStats.totalRevenue > 0 
+                          ? `${Math.round((feeStats.pending / feeStats.totalRevenue) * 100)}%`
+                          : '0%'}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -362,17 +369,13 @@ export default function Reports() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Net Profit</CardTitle>
+                  <CardTitle>Total Collected</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-green-600">{formatCurrencyINR(65200)}</p>
-                      <p className="text-sm text-muted-foreground mt-2">This Quarter</p>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 text-sm">
-                      <TrendingUp className="h-4 w-4 text-green-600" />
-                      <span className="text-green-600">15.3% increase</span>
+                      <p className="text-4xl font-bold text-green-600">{formatCurrencyINR(feeStats.collected)}</p>
+                      <p className="text-sm text-muted-foreground mt-2">Total Collected Fees</p>
                     </div>
                   </div>
                 </CardContent>

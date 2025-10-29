@@ -9,34 +9,30 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { formatCurrencyINR } from '@/lib/utils';
 
 export function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{
+    totalStudents: number;
+    totalFaculty: number;
+    monthlyRevenue: number;
+    pendingFees: number;
+  }>({
     queryKey: ['/api/dashboard/admin/stats'],
   });
 
-  const recentAdmissions = [
-    { id: '1', name: 'Sarah Johnson', class: 'Grade 10-A', admissionDate: '2025-01-15', status: 'active' },
-    { id: '2', name: 'Michael Chen', class: 'Grade 9-B', admissionDate: '2025-01-14', status: 'active' },
-    { id: '3', name: 'Emma Williams', class: 'Grade 11-A', admissionDate: '2025-01-14', status: 'active' },
-    { id: '4', name: 'James Brown', class: 'Grade 8-C', admissionDate: '2025-01-13', status: 'pending' },
-    { id: '5', name: 'Olivia Davis', class: 'Grade 12-A', admissionDate: '2025-01-12', status: 'active' },
-  ];
+  const { data: admissionsData, isLoading: isAdmissionsLoading } = useQuery<{ admissions: Array<any> }>({
+    queryKey: ['/api/dashboard/admin/recent-admissions'],
+  });
 
-  const feeCollectionData = [
-    { month: 'Aug', amount: 45000 },
-    { month: 'Sep', amount: 52000 },
-    { month: 'Oct', amount: 48000 },
-    { month: 'Nov', amount: 55000 },
-    { month: 'Dec', amount: 58000 },
-    { month: 'Jan', amount: 62000 },
-  ];
+  const { data: feeCollectionTrends, isLoading: isFeeLoading } = useQuery<{ trends: Array<any> }>({
+    queryKey: ['/api/dashboard/admin/fee-collection-trends'],
+  });
 
-  const recentActivities = [
-    { id: '1', action: 'New student admitted', user: 'Admin', time: '2 hours ago' },
-    { id: '2', action: 'Fee payment received', user: 'Sarah Johnson', time: '3 hours ago' },
-    { id: '3', action: 'Exam schedule published', user: 'Principal', time: '5 hours ago' },
-    { id: '4', action: 'Attendance marked', user: 'Ms. Anderson', time: '6 hours ago' },
-    { id: '5', action: 'New announcement posted', user: 'Admin', time: '1 day ago' },
-  ];
+  const { data: activitiesData, isLoading: isActivitiesLoading } = useQuery<{ activities: Array<any> }>({
+    queryKey: ['/api/dashboard/admin/recent-activities'],
+  });
+
+  const recentAdmissions = admissionsData?.admissions || [];
+  const feeCollectionData = feeCollectionTrends?.trends || [];
+  const recentActivities = activitiesData?.activities || [];
 
   return (
     <div className="p-6 space-y-8 max-w-7xl">
@@ -48,30 +44,26 @@ export function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Students"
-          value={isLoading ? '...' : stats?.totalStudents || 1248}
+          value={isLoading ? '...' : (stats?.totalStudents?.toString() || '0')}
           icon={GraduationCap}
-          trend={{ value: 5.2, label: 'vs last month', isPositive: true }}
           testId="stat-total-students"
         />
         <StatCard
           title="Total Faculty"
-          value={isLoading ? '...' : stats?.totalFaculty || 87}
+          value={isLoading ? '...' : (stats?.totalFaculty?.toString() || '0')}
           icon={Users}
-          trend={{ value: 2.1, label: 'vs last month', isPositive: true }}
           testId="stat-total-faculty"
         />
         <StatCard
           title="Monthly Revenue"
-          value={isLoading ? '...' : (stats?.monthlyRevenue ? formatCurrencyINR(stats.monthlyRevenue) : formatCurrencyINR(62450))}
+          value={isLoading ? '...' : (stats?.monthlyRevenue ? formatCurrencyINR(stats.monthlyRevenue) : formatCurrencyINR(0))}
           icon={IndianRupee}
-          trend={{ value: 8.3, label: 'vs last month', isPositive: true }}
           testId="stat-monthly-revenue"
         />
         <StatCard
           title="Pending Fees"
-          value={isLoading ? '...' : (stats?.pendingFees ? formatCurrencyINR(stats.pendingFees) : formatCurrencyINR(8230))}
+          value={isLoading ? '...' : (stats?.pendingFees ? formatCurrencyINR(stats.pendingFees) : formatCurrencyINR(0))}
           icon={AlertCircle}
-          trend={{ value: 3.2, label: 'vs last month', isPositive: false }}
           testId="stat-pending-fees"
         />
       </div>
@@ -104,6 +96,8 @@ export function AdminDashboard() {
           <CardContent>
             <DataTable
               data={recentAdmissions}
+              isLoading={isAdmissionsLoading}
+              emptyMessage="No recent admissions"
               columns={[
                 {
                   key: 'name',
@@ -141,15 +135,25 @@ export function AdminDashboard() {
             <CardDescription>Monthly fee collection over last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={feeCollectionData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-xs" />
-                <YAxis className="text-xs" />
-                <Tooltip />
-                <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            {isFeeLoading ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
+            ) : feeCollectionData.length === 0 ? (
+              <div className="flex items-center justify-center h-[250px]">
+                <p className="text-muted-foreground">No data available</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={feeCollectionData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -160,17 +164,27 @@ export function AdminDashboard() {
           <CardDescription>Latest activities across the school</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate border">
-                <div>
-                  <p className="font-medium">{activity.action}</p>
-                  <p className="text-sm text-muted-foreground">by {activity.user}</p>
+          {isActivitiesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : recentActivities.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">No recent activities</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg hover-elevate border">
+                  <div>
+                    <p className="font-medium">{activity.action}</p>
+                    <p className="text-sm text-muted-foreground">by {activity.user}</p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{activity.time}</span>
                 </div>
-                <span className="text-sm text-muted-foreground">{activity.time}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
