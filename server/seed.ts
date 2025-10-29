@@ -1,4 +1,4 @@
-import { db } from './db';
+import { connectToDatabase } from './db';
 import { storage } from './storage';
 import bcrypt from 'bcryptjs';
 
@@ -6,6 +6,7 @@ async function seed() {
   console.log('Starting database seed...');
 
   try {
+    await connectToDatabase();
     // Create demo tenant
     const tenant = await storage.createTenant({
       name: 'Springfield High School',
@@ -21,7 +22,7 @@ async function seed() {
     const hashedPassword = await bcrypt.hash('demo123', 10);
 
     const adminUser = await storage.createUser({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       email: 'admin@school.com',
       password: hashedPassword,
       role: 'admin',
@@ -33,7 +34,7 @@ async function seed() {
     console.log('Created admin user');
 
     const principalUser = await storage.createUser({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       email: 'principal@school.com',
       password: hashedPassword,
       role: 'principal',
@@ -45,7 +46,7 @@ async function seed() {
     console.log('Created principal user');
 
     const facultyUser = await storage.createUser({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       email: 'teacher@school.com',
       password: hashedPassword,
       role: 'faculty',
@@ -58,36 +59,36 @@ async function seed() {
 
     // Create classes
     const class10A = await storage.createClass({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       name: 'Grade 10-A',
       grade: 10,
       section: 'A',
       capacity: 40,
-      classTeacherId: facultyUser.id,
+      classTeacherId: facultyUser._id,
       academicYear: '2024-2025',
     });
 
     const class9B = await storage.createClass({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       name: 'Grade 9-B',
       grade: 9,
       section: 'B',
       capacity: 45,
-      classTeacherId: facultyUser.id,
+      classTeacherId: facultyUser._id,
       academicYear: '2024-2025',
     });
     console.log('Created classes');
 
     // Create subjects
     const mathSubject = await storage.createSubject({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       name: 'Mathematics',
       code: 'MATH101',
       description: 'Core mathematics curriculum',
     });
 
     const physicsSubject = await storage.createSubject({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       name: 'Physics',
       code: 'PHY101',
       description: 'Introduction to physics',
@@ -96,7 +97,7 @@ async function seed() {
 
     // Create parent user
     const parentUser = await storage.createUser({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       email: 'parent@school.com',
       password: hashedPassword,
       role: 'parent',
@@ -109,7 +110,7 @@ async function seed() {
 
     // Create student user
     const studentUserAccount = await storage.createUser({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       email: 'student@school.com',
       password: hashedPassword,
       role: 'student',
@@ -121,15 +122,15 @@ async function seed() {
 
     // Create student profile
     const student = await storage.createStudent({
-      tenantId: tenant.id,
-      userId: studentUserAccount.id,
-      classId: class10A.id,
+      tenantId: tenant._id,
+      userId: studentUserAccount._id,
+      classId: class10A._id,
       admissionNumber: 'STD001',
       rollNumber: '15',
       dateOfBirth: '2008-05-15',
       gender: 'female',
       bloodGroup: 'A+',
-      parentId: parentUser.id,
+      parentId: parentUser._id,
       address: '456 Student Street, Springfield',
       emergencyContact: '+1-555-0104',
       admissionDate: '2020-04-01',
@@ -138,7 +139,7 @@ async function seed() {
 
     // Create exam
     const exam = await storage.createExam({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       name: 'Mid-term Examination',
       type: 'mid_term',
       startDate: '2025-02-01',
@@ -151,8 +152,8 @@ async function seed() {
 
     // Create fee structure
     const feeStructure = await storage.createFeeStructure({
-      tenantId: tenant.id,
-      classId: class10A.id,
+      tenantId: tenant._id,
+      classId: class10A._id,
       name: 'Annual Tuition Fee',
       amount: '5000',
       academicYear: '2024-2025',
@@ -163,12 +164,12 @@ async function seed() {
 
     // Create announcement
     const announcement = await storage.createAnnouncement({
-      tenantId: tenant.id,
+      tenantId: tenant._id,
       title: 'Welcome to Springfield High School',
       content: 'We are excited to have you here. This is a demo announcement.',
       targetRole: null,
       priority: 'high',
-      publishedBy: adminUser.id,
+      publishedBy: adminUser._id,
       expiresAt: null,
     });
     console.log('Created announcement');

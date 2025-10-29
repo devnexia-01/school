@@ -1,769 +1,697 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, date, decimal, boolean, pgEnum, index } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import mongoose, { Schema, Document, Model } from 'mongoose';
+import { z } from 'zod';
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", [
-  "super_admin",
-  "admin",
-  "principal",
-  "faculty",
-  "student",
-  "parent"
-]);
+export const UserRole = {
+  SUPER_ADMIN: 'super_admin',
+  ADMIN: 'admin',
+  PRINCIPAL: 'principal',
+  FACULTY: 'faculty',
+  STUDENT: 'student',
+  PARENT: 'parent',
+} as const;
 
-export const attendanceStatusEnum = pgEnum("attendance_status", [
-  "present",
-  "absent",
-  "late",
-  "half_day"
-]);
+export const AttendanceStatus = {
+  PRESENT: 'present',
+  ABSENT: 'absent',
+  LATE: 'late',
+  HALF_DAY: 'half_day',
+} as const;
 
-export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
+export const Gender = {
+  MALE: 'male',
+  FEMALE: 'female',
+  OTHER: 'other',
+} as const;
 
-export const feeStatusEnum = pgEnum("fee_status", ["paid", "pending", "overdue", "partial"]);
+export const FeeStatus = {
+  PAID: 'paid',
+  PENDING: 'pending',
+  OVERDUE: 'overdue',
+  PARTIAL: 'partial',
+} as const;
 
-export const examTypeEnum = pgEnum("exam_type", ["unit_test", "mid_term", "final", "practical"]);
+export const ExamType = {
+  UNIT_TEST: 'unit_test',
+  MID_TERM: 'mid_term',
+  FINAL: 'final',
+  PRACTICAL: 'practical',
+} as const;
 
-// Tenants Table (Schools)
-export const tenants = pgTable("tenants", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  email: varchar("email", { length: 255 }),
-  phone: varchar("phone", { length: 20 }),
-  address: text("address"),
-  logo: text("logo"),
-  active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const DayOfWeek = {
+  MONDAY: 'monday',
+  TUESDAY: 'tuesday',
+  WEDNESDAY: 'wednesday',
+  THURSDAY: 'thursday',
+  FRIDAY: 'friday',
+  SATURDAY: 'saturday',
+} as const;
+
+export const PayrollStatus = {
+  DRAFT: 'draft',
+  APPROVED: 'approved',
+  PAID: 'paid',
+} as const;
+
+export const LeaveType = {
+  SICK: 'sick',
+  CASUAL: 'casual',
+  EARNED: 'earned',
+  MATERNITY: 'maternity',
+  OTHER: 'other',
+} as const;
+
+export const LeaveStatus = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export const TicketStatus = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  RESOLVED: 'resolved',
+  CLOSED: 'closed',
+} as const;
+
+export const TicketPriority = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+  URGENT: 'urgent',
+} as const;
+
+export const SubscriptionStatus = {
+  TRIAL: 'trial',
+  ACTIVE: 'active',
+  SUSPENDED: 'suspended',
+  CANCELLED: 'cancelled',
+} as const;
+
+// Mongoose Schemas
+
+const TenantSchema = new Schema({
+  name: { type: String, required: true },
+  code: { type: String, required: true, unique: true },
+  email: String,
+  phone: String,
+  address: String,
+  logo: String,
+  active: { type: Boolean, default: true, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Users Table
-export const users = pgTable("users", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }),
-  email: varchar("email", { length: 255 }).notNull(),
-  password: text("password").notNull(),
-  role: userRoleEnum("role").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  phone: varchar("phone", { length: 20 }),
-  avatar: text("avatar"),
-  active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  emailIdx: index("users_email_idx").on(table.email),
-  tenantIdIdx: index("users_tenant_id_idx").on(table.tenantId),
-  roleIdx: index("users_role_idx").on(table.role),
-}));
-
-// Classes Table
-export const classes = pgTable("classes", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  name: text("name").notNull(),
-  grade: integer("grade").notNull(),
-  section: varchar("section", { length: 10 }).notNull(),
-  capacity: integer("capacity").default(40),
-  classTeacherId: varchar("class_teacher_id", { length: 255 }).references(() => users.id),
-  academicYear: varchar("academic_year", { length: 20 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("classes_tenant_id_idx").on(table.tenantId),
-}));
-
-// Subjects Table
-export const subjects = pgTable("subjects", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  name: text("name").notNull(),
-  code: varchar("code", { length: 50 }).notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("subjects_tenant_id_idx").on(table.tenantId),
-}));
-
-// Students Table
-export const students = pgTable("students", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id),
-  admissionNumber: varchar("admission_number", { length: 50 }).notNull(),
-  rollNumber: varchar("roll_number", { length: 20 }),
-  dateOfBirth: date("date_of_birth").notNull(),
-  gender: genderEnum("gender").notNull(),
-  bloodGroup: varchar("blood_group", { length: 5 }),
-  parentId: varchar("parent_id", { length: 255 }).references(() => users.id),
-  address: text("address"),
-  emergencyContact: varchar("emergency_contact", { length: 20 }),
-  admissionDate: date("admission_date").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("students_tenant_id_idx").on(table.tenantId),
-  userIdIdx: index("students_user_id_idx").on(table.userId),
-  classIdIdx: index("students_class_id_idx").on(table.classId),
-}));
-
-// Attendance Table
-export const attendance = pgTable("attendance", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  studentId: varchar("student_id", { length: 255 }).references(() => students.id, { onDelete: "cascade" }).notNull(),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id).notNull(),
-  date: date("date").notNull(),
-  status: attendanceStatusEnum("status").notNull(),
-  markedBy: varchar("marked_by", { length: 255 }).references(() => users.id),
-  remarks: text("remarks"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("attendance_tenant_id_idx").on(table.tenantId),
-  classDateIdx: index("attendance_class_date_idx").on(table.classId, table.date),
-}));
-
-// Exams Table
-export const exams = pgTable("exams", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  name: text("name").notNull(),
-  type: examTypeEnum("type").notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  academicYear: varchar("academic_year", { length: 20 }).notNull(),
-  description: text("description"),
-  published: boolean("published").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("exams_tenant_id_idx").on(table.tenantId),
-}));
-
-// Exam Results Table
-export const examResults = pgTable("exam_results", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  examId: varchar("exam_id", { length: 255 }).references(() => exams.id, { onDelete: "cascade" }).notNull(),
-  studentId: varchar("student_id", { length: 255 }).references(() => students.id, { onDelete: "cascade" }).notNull(),
-  subjectId: varchar("subject_id", { length: 255 }).references(() => subjects.id, { onDelete: "cascade" }).notNull(),
-  marksObtained: decimal("marks_obtained", { precision: 5, scale: 2 }).notNull(),
-  totalMarks: decimal("total_marks", { precision: 5, scale: 2 }).notNull(),
-  grade: varchar("grade", { length: 5 }),
-  remarks: text("remarks"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const UserSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant' },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: Object.values(UserRole), required: true },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  phone: String,
+  avatar: String,
+  active: { type: Boolean, default: true, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Fee Structures Table
-export const feeStructures = pgTable("fee_structures", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id, { onDelete: "cascade" }).notNull(),
-  name: text("name").notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  academicYear: varchar("academic_year", { length: 20 }).notNull(),
-  dueDate: date("due_date"),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+UserSchema.index({ email: 1 });
+UserSchema.index({ tenantId: 1 });
+UserSchema.index({ role: 1 });
+
+const ClassSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  name: { type: String, required: true },
+  grade: { type: Number, required: true },
+  section: { type: String, required: true },
+  capacity: { type: Number, default: 40 },
+  classTeacherId: { type: Schema.Types.ObjectId, ref: 'User' },
+  academicYear: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Fee Payments Table
-export const feePayments = pgTable("fee_payments", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  studentId: varchar("student_id", { length: 255 }).references(() => students.id, { onDelete: "cascade" }).notNull(),
-  feeStructureId: varchar("fee_structure_id", { length: 255 }).references(() => feeStructures.id),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  paymentDate: date("payment_date").notNull(),
-  paymentMode: varchar("payment_mode", { length: 50 }).notNull(),
-  transactionId: varchar("transaction_id", { length: 255 }),
-  status: feeStatusEnum("status").notNull(),
-  receiptNumber: varchar("receipt_number", { length: 50 }),
-  remarks: text("remarks"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+ClassSchema.index({ tenantId: 1 });
+
+const SubjectSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  name: { type: String, required: true },
+  code: { type: String, required: true },
+  description: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Announcements Table
-export const announcements = pgTable("announcements", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  targetRole: userRoleEnum("target_role"),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id),
-  priority: varchar("priority", { length: 20 }).default("normal"),
-  publishedBy: varchar("published_by", { length: 255 }).references(() => users.id),
-  publishedAt: timestamp("published_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  tenantIdIdx: index("announcements_tenant_id_idx").on(table.tenantId),
-}));
+SubjectSchema.index({ tenantId: 1 });
 
-// Class-Subject Mapping
-export const classSubjects = pgTable("class_subjects", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id, { onDelete: "cascade" }).notNull(),
-  subjectId: varchar("subject_id", { length: 255 }).references(() => subjects.id, { onDelete: "cascade" }).notNull(),
-  teacherId: varchar("teacher_id", { length: 255 }).references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const StudentSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class' },
+  admissionNumber: { type: String, required: true },
+  rollNumber: String,
+  dateOfBirth: { type: Date, required: true },
+  gender: { type: String, enum: Object.values(Gender), required: true },
+  bloodGroup: String,
+  parentId: { type: Schema.Types.ObjectId, ref: 'User' },
+  address: String,
+  emergencyContact: String,
+  admissionDate: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Timetable Table
-export const timetableEnum = pgEnum("day_of_week", ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]);
+StudentSchema.index({ tenantId: 1 });
+StudentSchema.index({ userId: 1 });
+StudentSchema.index({ classId: 1 });
 
-export const timetable = pgTable("timetable", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  classId: varchar("class_id", { length: 255 }).references(() => classes.id, { onDelete: "cascade" }).notNull(),
-  subjectId: varchar("subject_id", { length: 255 }).references(() => subjects.id, { onDelete: "cascade" }).notNull(),
-  teacherId: varchar("teacher_id", { length: 255 }).references(() => users.id),
-  dayOfWeek: timetableEnum("day_of_week").notNull(),
-  startTime: varchar("start_time", { length: 10 }).notNull(),
-  endTime: varchar("end_time", { length: 10 }).notNull(),
-  roomNumber: varchar("room_number", { length: 50 }),
-  academicYear: varchar("academic_year", { length: 20 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const AttendanceSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  date: { type: Date, required: true },
+  status: { type: String, enum: Object.values(AttendanceStatus), required: true },
+  markedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  remarks: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Transport Routes Table
-export const transportRoutes = pgTable("transport_routes", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  routeName: text("route_name").notNull(),
-  routeNumber: varchar("route_number", { length: 50 }).notNull(),
-  driverName: text("driver_name"),
-  driverPhone: varchar("driver_phone", { length: 20 }),
-  vehicleNumber: varchar("vehicle_number", { length: 50 }),
-  capacity: integer("capacity"),
-  fare: decimal("fare", { precision: 10, scale: 2 }),
-  stops: text("stops"),
-  active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+AttendanceSchema.index({ tenantId: 1 });
+AttendanceSchema.index({ classId: 1, date: 1 });
+
+const ExamSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  name: { type: String, required: true },
+  type: { type: String, enum: Object.values(ExamType), required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  academicYear: { type: String, required: true },
+  description: String,
+  published: { type: Boolean, default: false, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Student Transport Mapping
-export const studentTransport = pgTable("student_transport", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  studentId: varchar("student_id", { length: 255 }).references(() => students.id, { onDelete: "cascade" }).notNull(),
-  routeId: varchar("route_id", { length: 255 }).references(() => transportRoutes.id, { onDelete: "cascade" }).notNull(),
-  pickupStop: text("pickup_stop"),
-  dropStop: text("drop_stop"),
-  active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+ExamSchema.index({ tenantId: 1 });
+
+const ExamResultSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  examId: { type: Schema.Types.ObjectId, ref: 'Exam', required: true },
+  studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  subjectId: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  marksObtained: { type: Number, required: true },
+  totalMarks: { type: Number, required: true },
+  grade: String,
+  remarks: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Payroll Table
-export const payrollStatusEnum = pgEnum("payroll_status", ["draft", "approved", "paid"]);
-
-export const payroll = pgTable("payroll", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
-  month: varchar("month", { length: 20 }).notNull(),
-  year: integer("year").notNull(),
-  basicSalary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
-  allowances: decimal("allowances", { precision: 10, scale: 2 }).default('0'),
-  deductions: decimal("deductions", { precision: 10, scale: 2 }).default('0'),
-  netSalary: decimal("net_salary", { precision: 10, scale: 2 }).notNull(),
-  status: payrollStatusEnum("status").default("draft").notNull(),
-  paidOn: date("paid_on"),
-  remarks: text("remarks"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const FeeStructureSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  name: { type: String, required: true },
+  amount: { type: Number, required: true },
+  academicYear: { type: String, required: true },
+  dueDate: Date,
+  description: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Leave Requests Table
-export const leaveTypeEnum = pgEnum("leave_type", ["sick", "casual", "earned", "maternity", "other"]);
-export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected"]);
-
-export const leaveRequests = pgTable("leave_requests", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull(),
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
-  leaveType: leaveTypeEnum("leave_type").notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  reason: text("reason").notNull(),
-  status: leaveStatusEnum("status").default("pending").notNull(),
-  reviewedBy: varchar("reviewed_by", { length: 255 }).references(() => users.id),
-  reviewedAt: timestamp("reviewed_at"),
-  reviewNotes: text("review_notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const FeePaymentSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  feeStructureId: { type: Schema.Types.ObjectId, ref: 'FeeStructure' },
+  amount: { type: Number, required: true },
+  paymentDate: { type: Date, required: true },
+  paymentMode: { type: String, required: true },
+  transactionId: String,
+  status: { type: String, enum: Object.values(FeeStatus), required: true },
+  receiptNumber: String,
+  remarks: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Support Tickets Table (for super admin)
-export const ticketStatusEnum = pgEnum("ticket_status", ["open", "in_progress", "resolved", "closed"]);
-export const ticketPriorityEnum = pgEnum("ticket_priority", ["low", "medium", "high", "urgent"]);
-
-export const supportTickets = pgTable("support_tickets", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }),
-  createdBy: varchar("created_by", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  category: varchar("category", { length: 50 }).notNull(),
-  priority: ticketPriorityEnum("priority").default("medium").notNull(),
-  status: ticketStatusEnum("status").default("open").notNull(),
-  assignedTo: varchar("assigned_to", { length: 255 }).references(() => users.id),
-  resolvedAt: timestamp("resolved_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const AnnouncementSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  targetRole: { type: String, enum: Object.values(UserRole) },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class' },
+  priority: { type: String, default: 'normal' },
+  publishedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  publishedAt: { type: Date, default: Date.now, required: true },
+  expiresAt: Date,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Subscriptions Table (for super admin)
-export const subscriptionStatusEnum = pgEnum("subscription_status", ["trial", "active", "suspended", "cancelled"]);
+AnnouncementSchema.index({ tenantId: 1 });
 
-export const subscriptions = pgTable("subscriptions", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  tenantId: varchar("tenant_id", { length: 255 }).references(() => tenants.id, { onDelete: "cascade" }).notNull().unique(),
-  planName: varchar("plan_name", { length: 100 }).notNull(),
-  maxStudents: integer("max_students").notNull(),
-  maxFaculty: integer("max_faculty").notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  billingCycle: varchar("billing_cycle", { length: 20 }).notNull(),
-  status: subscriptionStatusEnum("status").default("trial").notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  autoRenew: boolean("auto_renew").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+const ClassSubjectSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  subjectId: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  teacherId: { type: Schema.Types.ObjectId, ref: 'User' },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// User Preferences Table
-export const userPreferences = pgTable("user_preferences", {
-  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
-  theme: varchar("theme", { length: 20 }).default("system"),
-  language: varchar("language", { length: 20 }).default("en"),
-  emailNotifications: boolean("email_notifications").default(true).notNull(),
-  pushNotifications: boolean("push_notifications").default(true).notNull(),
-  timezone: varchar("timezone", { length: 50 }).default("UTC"),
-  dateFormat: varchar("date_format", { length: 20 }).default("MM/DD/YYYY"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+const TimetableSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  subjectId: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
+  teacherId: { type: Schema.Types.ObjectId, ref: 'User' },
+  dayOfWeek: { type: String, enum: Object.values(DayOfWeek), required: true },
+  startTime: { type: String, required: true },
+  endTime: { type: String, required: true },
+  roomNumber: String,
+  academicYear: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-// Relations
-export const tenantsRelations = relations(tenants, ({ many }) => ({
-  users: many(users),
-  classes: many(classes),
-  students: many(students),
-}));
-
-export const usersRelations = relations(users, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [users.tenantId],
-    references: [tenants.id],
-  }),
-  studentProfile: one(students, {
-    fields: [users.id],
-    references: [students.userId],
-  }),
-  children: many(students, { relationName: "parent" }),
-}));
-
-export const classesRelations = relations(classes, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [classes.tenantId],
-    references: [tenants.id],
-  }),
-  classTeacher: one(users, {
-    fields: [classes.classTeacherId],
-    references: [users.id],
-  }),
-  students: many(students),
-  subjects: many(classSubjects),
-}));
-
-export const studentsRelations = relations(students, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [students.tenantId],
-    references: [tenants.id],
-  }),
-  user: one(users, {
-    fields: [students.userId],
-    references: [users.id],
-  }),
-  class: one(classes, {
-    fields: [students.classId],
-    references: [classes.id],
-  }),
-  parent: one(users, {
-    fields: [students.parentId],
-    references: [users.id],
-    relationName: "parent",
-  }),
-  attendance: many(attendance),
-  examResults: many(examResults),
-  feePayments: many(feePayments),
-}));
-
-export const subjectsRelations = relations(subjects, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [subjects.tenantId],
-    references: [tenants.id],
-  }),
-  classes: many(classSubjects),
-  examResults: many(examResults),
-}));
-
-export const attendanceRelations = relations(attendance, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [attendance.tenantId],
-    references: [tenants.id],
-  }),
-  student: one(students, {
-    fields: [attendance.studentId],
-    references: [students.id],
-  }),
-  class: one(classes, {
-    fields: [attendance.classId],
-    references: [classes.id],
-  }),
-  markedByUser: one(users, {
-    fields: [attendance.markedBy],
-    references: [users.id],
-  }),
-}));
-
-export const examsRelations = relations(exams, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [exams.tenantId],
-    references: [tenants.id],
-  }),
-  results: many(examResults),
-}));
-
-export const examResultsRelations = relations(examResults, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [examResults.tenantId],
-    references: [tenants.id],
-  }),
-  exam: one(exams, {
-    fields: [examResults.examId],
-    references: [exams.id],
-  }),
-  student: one(students, {
-    fields: [examResults.studentId],
-    references: [students.id],
-  }),
-  subject: one(subjects, {
-    fields: [examResults.subjectId],
-    references: [subjects.id],
-  }),
-}));
-
-export const feeStructuresRelations = relations(feeStructures, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [feeStructures.tenantId],
-    references: [tenants.id],
-  }),
-  class: one(classes, {
-    fields: [feeStructures.classId],
-    references: [classes.id],
-  }),
-  payments: many(feePayments),
-}));
-
-export const feePaymentsRelations = relations(feePayments, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [feePayments.tenantId],
-    references: [tenants.id],
-  }),
-  student: one(students, {
-    fields: [feePayments.studentId],
-    references: [students.id],
-  }),
-  feeStructure: one(feeStructures, {
-    fields: [feePayments.feeStructureId],
-    references: [feeStructures.id],
-  }),
-}));
-
-export const announcementsRelations = relations(announcements, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [announcements.tenantId],
-    references: [tenants.id],
-  }),
-  class: one(classes, {
-    fields: [announcements.classId],
-    references: [classes.id],
-  }),
-  publishedByUser: one(users, {
-    fields: [announcements.publishedBy],
-    references: [users.id],
-  }),
-}));
-
-export const classSubjectsRelations = relations(classSubjects, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [classSubjects.tenantId],
-    references: [tenants.id],
-  }),
-  class: one(classes, {
-    fields: [classSubjects.classId],
-    references: [classes.id],
-  }),
-  subject: one(subjects, {
-    fields: [classSubjects.subjectId],
-    references: [subjects.id],
-  }),
-  teacher: one(users, {
-    fields: [classSubjects.teacherId],
-    references: [users.id],
-  }),
-}));
-
-export const timetableRelations = relations(timetable, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [timetable.tenantId],
-    references: [tenants.id],
-  }),
-  class: one(classes, {
-    fields: [timetable.classId],
-    references: [classes.id],
-  }),
-  subject: one(subjects, {
-    fields: [timetable.subjectId],
-    references: [subjects.id],
-  }),
-  teacher: one(users, {
-    fields: [timetable.teacherId],
-    references: [users.id],
-  }),
-}));
-
-export const transportRoutesRelations = relations(transportRoutes, ({ one, many }) => ({
-  tenant: one(tenants, {
-    fields: [transportRoutes.tenantId],
-    references: [tenants.id],
-  }),
-  studentTransports: many(studentTransport),
-}));
-
-export const studentTransportRelations = relations(studentTransport, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [studentTransport.tenantId],
-    references: [tenants.id],
-  }),
-  student: one(students, {
-    fields: [studentTransport.studentId],
-    references: [students.id],
-  }),
-  route: one(transportRoutes, {
-    fields: [studentTransport.routeId],
-    references: [transportRoutes.id],
-  }),
-}));
-
-export const payrollRelations = relations(payroll, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [payroll.tenantId],
-    references: [tenants.id],
-  }),
-  user: one(users, {
-    fields: [payroll.userId],
-    references: [users.id],
-  }),
-}));
-
-export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [leaveRequests.tenantId],
-    references: [tenants.id],
-  }),
-  user: one(users, {
-    fields: [leaveRequests.userId],
-    references: [users.id],
-  }),
-  reviewer: one(users, {
-    fields: [leaveRequests.reviewedBy],
-    references: [users.id],
-  }),
-}));
-
-export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [supportTickets.tenantId],
-    references: [tenants.id],
-  }),
-  creator: one(users, {
-    fields: [supportTickets.createdBy],
-    references: [users.id],
-  }),
-  assignee: one(users, {
-    fields: [supportTickets.assignedTo],
-    references: [users.id],
-  }),
-}));
-
-export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
-  tenant: one(tenants, {
-    fields: [subscriptions.tenantId],
-    references: [tenants.id],
-  }),
-}));
-
-// Insert Schemas
-export const insertTenantSchema = createInsertSchema(tenants).omit({
-  id: true,
-  createdAt: true,
+const TransportRouteSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  routeName: { type: String, required: true },
+  routeNumber: { type: String, required: true },
+  driverName: String,
+  driverPhone: String,
+  vehicleNumber: String,
+  capacity: Number,
+  fare: Number,
+  stops: String,
+  active: { type: Boolean, default: true, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
+const StudentTransportSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
+  routeId: { type: Schema.Types.ObjectId, ref: 'TransportRoute', required: true },
+  pickupStop: String,
+  dropStop: String,
+  active: { type: Boolean, default: true, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertClassSchema = createInsertSchema(classes).omit({
-  id: true,
-  createdAt: true,
+const PayrollSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  month: { type: String, required: true },
+  year: { type: Number, required: true },
+  basicSalary: { type: Number, required: true },
+  allowances: { type: Number, default: 0 },
+  deductions: { type: Number, default: 0 },
+  netSalary: { type: Number, required: true },
+  status: { type: String, enum: Object.values(PayrollStatus), default: 'draft', required: true },
+  paidOn: Date,
+  remarks: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertSubjectSchema = createInsertSchema(subjects).omit({
-  id: true,
-  createdAt: true,
+const LeaveRequestSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  leaveType: { type: String, enum: Object.values(LeaveType), required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  reason: { type: String, required: true },
+  status: { type: String, enum: Object.values(LeaveStatus), default: 'pending', required: true },
+  reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  reviewedAt: Date,
+  reviewNotes: String,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertStudentSchema = createInsertSchema(students).omit({
-  id: true,
-  createdAt: true,
+const SupportTicketSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant' },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  category: { type: String, required: true },
+  priority: { type: String, enum: Object.values(TicketPriority), default: 'medium', required: true },
+  status: { type: String, enum: Object.values(TicketStatus), default: 'open', required: true },
+  assignedTo: { type: Schema.Types.ObjectId, ref: 'User' },
+  resolvedAt: Date,
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertAttendanceSchema = createInsertSchema(attendance).omit({
-  id: true,
-  createdAt: true,
+const SubscriptionSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, unique: true },
+  planName: { type: String, required: true },
+  maxStudents: { type: Number, required: true },
+  maxFaculty: { type: Number, required: true },
+  price: { type: Number, required: true },
+  billingCycle: { type: String, required: true },
+  status: { type: String, enum: Object.values(SubscriptionStatus), default: 'trial', required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  autoRenew: { type: Boolean, default: true, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertExamSchema = createInsertSchema(exams).omit({
-  id: true,
-  createdAt: true,
+const UserPreferenceSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  theme: { type: String, default: 'system' },
+  language: { type: String, default: 'en' },
+  emailNotifications: { type: Boolean, default: true, required: true },
+  pushNotifications: { type: Boolean, default: true, required: true },
+  timezone: { type: String, default: 'UTC' },
+  dateFormat: { type: String, default: 'MM/DD/YYYY' },
+  createdAt: { type: Date, default: Date.now, required: true },
+  updatedAt: { type: Date, default: Date.now, required: true },
 });
 
-export const insertExamResultSchema = createInsertSchema(examResults).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertFeeStructureSchema = createInsertSchema(feeStructures).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertFeePaymentSchema = createInsertSchema(feePayments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
-  id: true,
-  createdAt: true,
-  publishedAt: true,
-});
-
-export const insertClassSubjectSchema = createInsertSchema(classSubjects).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertTimetableSchema = createInsertSchema(timetable).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertTransportRouteSchema = createInsertSchema(transportRoutes).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertStudentTransportSchema = createInsertSchema(studentTransport).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertPayrollSchema = createInsertSchema(payroll).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertLeaveRequestSchema = createInsertSchema(leaveRequests).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertUserPreferenceSchema = createInsertSchema(userPreferences).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// Models
+export const TenantModel = mongoose.model('Tenant', TenantSchema);
+export const UserModel = mongoose.model('User', UserSchema);
+export const ClassModel = mongoose.model('Class', ClassSchema);
+export const SubjectModel = mongoose.model('Subject', SubjectSchema);
+export const StudentModel = mongoose.model('Student', StudentSchema);
+export const AttendanceModel = mongoose.model('Attendance', AttendanceSchema);
+export const ExamModel = mongoose.model('Exam', ExamSchema);
+export const ExamResultModel = mongoose.model('ExamResult', ExamResultSchema);
+export const FeeStructureModel = mongoose.model('FeeStructure', FeeStructureSchema);
+export const FeePaymentModel = mongoose.model('FeePayment', FeePaymentSchema);
+export const AnnouncementModel = mongoose.model('Announcement', AnnouncementSchema);
+export const ClassSubjectModel = mongoose.model('ClassSubject', ClassSubjectSchema);
+export const TimetableModel = mongoose.model('Timetable', TimetableSchema);
+export const TransportRouteModel = mongoose.model('TransportRoute', TransportRouteSchema);
+export const StudentTransportModel = mongoose.model('StudentTransport', StudentTransportSchema);
+export const PayrollModel = mongoose.model('Payroll', PayrollSchema);
+export const LeaveRequestModel = mongoose.model('LeaveRequest', LeaveRequestSchema);
+export const SupportTicketModel = mongoose.model('SupportTicket', SupportTicketSchema);
+export const SubscriptionModel = mongoose.model('Subscription', SubscriptionSchema);
+export const UserPreferenceModel = mongoose.model('UserPreference', UserPreferenceSchema);
 
 // Types
-export type Tenant = typeof tenants.$inferSelect;
-export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type Tenant = {
+  _id: string;
+  name: string;
+  code: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  logo?: string;
+  active: boolean;
+  createdAt: Date;
+};
 
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = {
+  _id: string;
+  tenantId?: string;
+  email: string;
+  password: string;
+  role: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  avatar?: string;
+  active: boolean;
+  createdAt: Date;
+};
 
-export type Class = typeof classes.$inferSelect;
-export type InsertClass = z.infer<typeof insertClassSchema>;
+export type Class = {
+  _id: string;
+  tenantId: string;
+  name: string;
+  grade: number;
+  section: string;
+  capacity?: number;
+  classTeacherId?: string;
+  academicYear: string;
+  createdAt: Date;
+};
 
-export type Subject = typeof subjects.$inferSelect;
-export type InsertSubject = z.infer<typeof insertSubjectSchema>;
+export type Subject = {
+  _id: string;
+  tenantId: string;
+  name: string;
+  code: string;
+  description?: string;
+  createdAt: Date;
+};
 
-export type Student = typeof students.$inferSelect;
-export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = {
+  _id: string;
+  tenantId: string;
+  userId: string;
+  classId?: string;
+  admissionNumber: string;
+  rollNumber?: string;
+  dateOfBirth: Date;
+  gender: string;
+  bloodGroup?: string;
+  parentId?: string;
+  address?: string;
+  emergencyContact?: string;
+  admissionDate: Date;
+  createdAt: Date;
+};
 
-export type Attendance = typeof attendance.$inferSelect;
-export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+export type Attendance = {
+  _id: string;
+  tenantId: string;
+  studentId: string;
+  classId: string;
+  date: Date;
+  status: string;
+  markedBy?: string;
+  remarks?: string;
+  createdAt: Date;
+};
 
-export type Exam = typeof exams.$inferSelect;
-export type InsertExam = z.infer<typeof insertExamSchema>;
+export type Exam = {
+  _id: string;
+  tenantId: string;
+  name: string;
+  type: string;
+  startDate: Date;
+  endDate: Date;
+  academicYear: string;
+  description?: string;
+  published: boolean;
+  createdAt: Date;
+};
 
-export type ExamResult = typeof examResults.$inferSelect;
-export type InsertExamResult = z.infer<typeof insertExamResultSchema>;
+export type ExamResult = {
+  _id: string;
+  tenantId: string;
+  examId: string;
+  studentId: string;
+  subjectId: string;
+  marksObtained: number;
+  totalMarks: number;
+  grade?: string;
+  remarks?: string;
+  createdAt: Date;
+};
 
-export type FeeStructure = typeof feeStructures.$inferSelect;
-export type InsertFeeStructure = z.infer<typeof insertFeeStructureSchema>;
+export type FeeStructure = {
+  _id: string;
+  tenantId: string;
+  classId: string;
+  name: string;
+  amount: number;
+  academicYear: string;
+  dueDate?: Date;
+  description?: string;
+  createdAt: Date;
+};
 
-export type FeePayment = typeof feePayments.$inferSelect;
-export type InsertFeePayment = z.infer<typeof insertFeePaymentSchema>;
+export type FeePayment = {
+  _id: string;
+  tenantId: string;
+  studentId: string;
+  feeStructureId?: string;
+  amount: number;
+  paymentDate: Date;
+  paymentMode: string;
+  transactionId?: string;
+  status: string;
+  receiptNumber?: string;
+  remarks?: string;
+  createdAt: Date;
+};
 
-export type Announcement = typeof announcements.$inferSelect;
-export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+export type Announcement = {
+  _id: string;
+  tenantId: string;
+  title: string;
+  content: string;
+  targetRole?: string;
+  classId?: string;
+  priority?: string;
+  publishedBy?: string;
+  publishedAt: Date;
+  expiresAt?: Date;
+  createdAt: Date;
+};
 
-export type ClassSubject = typeof classSubjects.$inferSelect;
-export type InsertClassSubject = z.infer<typeof insertClassSubjectSchema>;
+export type ClassSubject = {
+  _id: string;
+  tenantId: string;
+  classId: string;
+  subjectId: string;
+  teacherId?: string;
+  createdAt: Date;
+};
 
-export type Timetable = typeof timetable.$inferSelect;
-export type InsertTimetable = z.infer<typeof insertTimetableSchema>;
+export type UserPreference = {
+  _id: string;
+  userId: string;
+  theme?: string;
+  language?: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  timezone?: string;
+  dateFormat?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-export type TransportRoute = typeof transportRoutes.$inferSelect;
-export type InsertTransportRoute = z.infer<typeof insertTransportRouteSchema>;
+// Insert types (omit _id and fields with defaults)
+export type InsertTenant = Omit<Tenant, '_id' | 'createdAt' | 'active'> & { active?: boolean };
+export type InsertUser = Omit<User, '_id' | 'createdAt' | 'active'> & { active?: boolean };
+export type InsertClass = Omit<Class, '_id' | 'createdAt'>;
+export type InsertSubject = Omit<Subject, '_id' | 'createdAt'>;
+export type InsertStudent = Omit<Student, '_id' | 'createdAt'>;
+export type InsertAttendance = Omit<Attendance, '_id' | 'createdAt'>;
+export type InsertExam = Omit<Exam, '_id' | 'createdAt' | 'published'> & { published?: boolean };
+export type InsertExamResult = Omit<ExamResult, '_id' | 'createdAt'>;
+export type InsertFeeStructure = Omit<FeeStructure, '_id' | 'createdAt'>;
+export type InsertFeePayment = Omit<FeePayment, '_id' | 'createdAt'>;
+export type InsertAnnouncement = Omit<Announcement, '_id' | 'createdAt' | 'publishedAt'> & { publishedAt?: Date };
+export type InsertClassSubject = Omit<ClassSubject, '_id' | 'createdAt'>;
+export type InsertUserPreference = Omit<UserPreference, '_id' | 'createdAt' | 'updatedAt'>;
 
-export type StudentTransport = typeof studentTransport.$inferSelect;
-export type InsertStudentTransport = z.infer<typeof insertStudentTransportSchema>;
+// Zod schemas for validation
+export const insertTenantSchema = z.object({
+  name: z.string(),
+  code: z.string(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  logo: z.string().optional(),
+  active: z.boolean().optional(),
+});
 
-export type Payroll = typeof payroll.$inferSelect;
-export type InsertPayroll = z.infer<typeof insertPayrollSchema>;
+export const insertUserSchema = z.object({
+  tenantId: z.string().optional(),
+  email: z.string().email(),
+  password: z.string(),
+  role: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  phone: z.string().optional(),
+  avatar: z.string().optional(),
+  active: z.boolean().optional(),
+});
 
-export type LeaveRequest = typeof leaveRequests.$inferSelect;
-export type InsertLeaveRequest = z.infer<typeof insertLeaveRequestSchema>;
+export const insertClassSchema = z.object({
+  tenantId: z.string(),
+  name: z.string(),
+  grade: z.number(),
+  section: z.string(),
+  capacity: z.number().optional(),
+  classTeacherId: z.string().optional(),
+  academicYear: z.string(),
+});
 
-export type SupportTicket = typeof supportTickets.$inferSelect;
-export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+export const insertSubjectSchema = z.object({
+  tenantId: z.string(),
+  name: z.string(),
+  code: z.string(),
+  description: z.string().optional(),
+});
 
-export type Subscription = typeof subscriptions.$inferSelect;
-export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export const insertStudentSchema = z.object({
+  tenantId: z.string(),
+  userId: z.string(),
+  classId: z.string().optional(),
+  admissionNumber: z.string(),
+  rollNumber: z.string().optional(),
+  dateOfBirth: z.string().or(z.date()),
+  gender: z.string(),
+  bloodGroup: z.string().optional(),
+  parentId: z.string().optional(),
+  address: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  admissionDate: z.string().or(z.date()),
+});
 
-export type UserPreference = typeof userPreferences.$inferSelect;
-export type InsertUserPreference = z.infer<typeof insertUserPreferenceSchema>;
+export const insertAttendanceSchema = z.object({
+  tenantId: z.string(),
+  studentId: z.string(),
+  classId: z.string(),
+  date: z.string().or(z.date()),
+  status: z.string(),
+  markedBy: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export const insertExamSchema = z.object({
+  tenantId: z.string(),
+  name: z.string(),
+  type: z.string(),
+  startDate: z.string().or(z.date()),
+  endDate: z.string().or(z.date()),
+  academicYear: z.string(),
+  description: z.string().optional(),
+  published: z.boolean().optional(),
+});
+
+export const insertExamResultSchema = z.object({
+  tenantId: z.string(),
+  examId: z.string(),
+  studentId: z.string(),
+  subjectId: z.string(),
+  marksObtained: z.number(),
+  totalMarks: z.number(),
+  grade: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export const insertFeeStructureSchema = z.object({
+  tenantId: z.string(),
+  classId: z.string(),
+  name: z.string(),
+  amount: z.number(),
+  academicYear: z.string(),
+  dueDate: z.string().or(z.date()).optional(),
+  description: z.string().optional(),
+});
+
+export const insertFeePaymentSchema = z.object({
+  tenantId: z.string(),
+  studentId: z.string(),
+  feeStructureId: z.string().optional(),
+  amount: z.number(),
+  paymentDate: z.string().or(z.date()),
+  paymentMode: z.string(),
+  transactionId: z.string().optional(),
+  status: z.string(),
+  receiptNumber: z.string().optional(),
+  remarks: z.string().optional(),
+});
+
+export const insertAnnouncementSchema = z.object({
+  tenantId: z.string(),
+  title: z.string(),
+  content: z.string(),
+  targetRole: z.string().optional(),
+  classId: z.string().optional(),
+  priority: z.string().optional(),
+  publishedBy: z.string().optional(),
+  publishedAt: z.date().optional(),
+  expiresAt: z.string().or(z.date()).optional(),
+});
+
+export const insertClassSubjectSchema = z.object({
+  tenantId: z.string(),
+  classId: z.string(),
+  subjectId: z.string(),
+  teacherId: z.string().optional(),
+});
+
+export const insertUserPreferenceSchema = z.object({
+  userId: z.string(),
+  theme: z.string().optional(),
+  language: z.string().optional(),
+  emailNotifications: z.boolean().optional(),
+  pushNotifications: z.boolean().optional(),
+  timezone: z.string().optional(),
+  dateFormat: z.string().optional(),
+});

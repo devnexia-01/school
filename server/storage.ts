@@ -1,17 +1,17 @@
 import {
-  users,
-  tenants,
-  students,
-  classes,
-  subjects,
-  attendance,
-  exams,
-  examResults,
-  feeStructures,
-  feePayments,
-  announcements,
-  classSubjects,
-  userPreferences,
+  TenantModel,
+  UserModel,
+  StudentModel,
+  ClassModel,
+  SubjectModel,
+  AttendanceModel,
+  ExamModel,
+  ExamResultModel,
+  FeeStructureModel,
+  FeePaymentModel,
+  AnnouncementModel,
+  ClassSubjectModel,
+  UserPreferenceModel,
   type User,
   type InsertUser,
   type Tenant,
@@ -39,8 +39,6 @@ import {
   type UserPreference,
   type InsertUserPreference,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -103,274 +101,256 @@ export interface IStorage {
   updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User>;
 }
 
+function toPlainObject(doc: any): any {
+  if (!doc) return undefined;
+  const obj = doc.toObject ? doc.toObject() : doc;
+  if (obj._id) {
+    obj._id = obj._id.toString();
+  }
+  if (obj.tenantId && typeof obj.tenantId === 'object') {
+    obj.tenantId = obj.tenantId.toString();
+  }
+  if (obj.userId && typeof obj.userId === 'object') {
+    obj.userId = obj.userId.toString();
+  }
+  if (obj.classId && typeof obj.classId === 'object') {
+    obj.classId = obj.classId.toString();
+  }
+  return obj;
+}
+
 export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    const user = await UserModel.findById(id).lean();
+    return user ? toPlainObject(user) : undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    const user = await UserModel.findOne({ email }).lean();
+    return user ? toPlainObject(user) : undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+    const user = await UserModel.create(insertUser);
+    return toPlainObject(user);
   }
 
   // Tenants
   async getTenant(id: string): Promise<Tenant | undefined> {
-    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
-    return tenant || undefined;
+    const tenant = await TenantModel.findById(id).lean();
+    return tenant ? toPlainObject(tenant) : undefined;
   }
 
   async getAllTenants(): Promise<Tenant[]> {
-    return await db.select().from(tenants);
+    const tenants = await TenantModel.find().lean();
+    return tenants.map(toPlainObject);
   }
 
   async createTenant(insertTenant: InsertTenant): Promise<Tenant> {
-    const [tenant] = await db.insert(tenants).values(insertTenant).returning();
-    return tenant;
+    const tenant = await TenantModel.create(insertTenant);
+    return toPlainObject(tenant);
   }
 
   // Students
   async getStudent(id: string, tenantId?: string): Promise<Student | undefined> {
-    const conditions = tenantId
-      ? and(eq(students.id, id), eq(students.tenantId, tenantId))
-      : eq(students.id, id);
-    const [student] = await db.select().from(students).where(conditions!);
-    return student || undefined;
+    const query = tenantId ? { _id: id, tenantId } : { _id: id };
+    const student = await StudentModel.findOne(query).lean();
+    return student ? toPlainObject(student) : undefined;
   }
 
   async getStudentsByClass(classId: string, tenantId: string): Promise<Student[]> {
-    return await db
-      .select()
-      .from(students)
-      .where(and(eq(students.classId, classId), eq(students.tenantId, tenantId)));
+    const students = await StudentModel.find({ classId, tenantId }).lean();
+    return students.map(toPlainObject);
   }
 
   async getStudentsByTenant(tenantId: string): Promise<Student[]> {
-    return await db.select().from(students).where(eq(students.tenantId, tenantId));
+    const students = await StudentModel.find({ tenantId }).lean();
+    return students.map(toPlainObject);
   }
 
   async getStudentsWithDetailsOptimized(tenantId: string, limit?: number, offset?: number): Promise<any[]> {
-    let query = db
-      .select({
-        id: students.id,
-        userId: students.userId,
-        admissionNumber: students.admissionNumber,
-        rollNumber: students.rollNumber,
-        classId: students.classId,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        phone: users.phone,
-        active: users.active,
-        avatar: users.avatar,
-        className: classes.name,
-      })
-      .from(students)
-      .leftJoin(users, eq(students.userId, users.id))
-      .leftJoin(classes, eq(students.classId, classes.id))
-      .where(eq(students.tenantId, tenantId))
-      .orderBy(students.admissionNumber);
+    let query = StudentModel.find({ tenantId })
+      .populate('userId', 'firstName lastName email phone active avatar')
+      .populate('classId', 'name')
+      .sort({ admissionNumber: 1 });
     
-    if (limit !== undefined) {
-      query = query.limit(limit) as any;
-    }
     if (offset !== undefined) {
-      query = query.offset(offset) as any;
+      query = query.skip(offset);
+    }
+    if (limit !== undefined) {
+      query = query.limit(limit);
     }
     
-    const result = await query;
+    const students = await query.lean();
     
-    return result.map(row => ({
-      id: row.id,
-      name: `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Unknown',
-      admissionNumber: row.admissionNumber,
-      class: row.className || 'Not assigned',
-      rollNumber: row.rollNumber || '',
-      email: row.email || '',
-      phone: row.phone || '',
-      status: row.active ? 'active' : 'inactive',
-      avatar: row.avatar || null,
-    }));
+    return students.map(student => {
+      const user = student.userId as any;
+      const classInfo = student.classId as any;
+      
+      return {
+        id: student._id.toString(),
+        name: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown' : 'Unknown',
+        admissionNumber: student.admissionNumber,
+        class: classInfo ? classInfo.name : 'Not assigned',
+        rollNumber: student.rollNumber || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        status: user?.active ? 'active' : 'inactive',
+        avatar: user?.avatar || null,
+      };
+    });
   }
 
   async getStudentsCount(tenantId: string): Promise<number> {
-    const result = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(students)
-      .where(eq(students.tenantId, tenantId));
-    return result[0]?.count || 0;
+    return await StudentModel.countDocuments({ tenantId });
   }
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
-    const [student] = await db.insert(students).values(insertStudent).returning();
-    return student;
+    const student = await StudentModel.create(insertStudent);
+    return toPlainObject(student);
   }
 
   // Classes
   async getClass(id: string, tenantId?: string): Promise<Class | undefined> {
-    const conditions = tenantId
-      ? and(eq(classes.id, id), eq(classes.tenantId, tenantId))
-      : eq(classes.id, id);
-    const [classData] = await db.select().from(classes).where(conditions!);
-    return classData || undefined;
+    const query = tenantId ? { _id: id, tenantId } : { _id: id };
+    const classData = await ClassModel.findOne(query).lean();
+    return classData ? toPlainObject(classData) : undefined;
   }
 
   async getClassesByTenant(tenantId: string): Promise<Class[]> {
-    return await db.select().from(classes).where(eq(classes.tenantId, tenantId));
+    const classes = await ClassModel.find({ tenantId }).lean();
+    return classes.map(toPlainObject);
   }
 
   async createClass(insertClass: InsertClass): Promise<Class> {
-    const [classData] = await db.insert(classes).values(insertClass).returning();
-    return classData;
+    const classData = await ClassModel.create(insertClass);
+    return toPlainObject(classData);
   }
 
   // Subjects
   async getSubjectsByTenant(tenantId: string): Promise<Subject[]> {
-    return await db.select().from(subjects).where(eq(subjects.tenantId, tenantId));
+    const subjects = await SubjectModel.find({ tenantId }).lean();
+    return subjects.map(toPlainObject);
   }
 
   async createSubject(insertSubject: InsertSubject): Promise<Subject> {
-    const [subject] = await db.insert(subjects).values(insertSubject).returning();
-    return subject;
+    const subject = await SubjectModel.create(insertSubject);
+    return toPlainObject(subject);
   }
 
   // Attendance
   async getAttendanceByDate(classId: string, date: string, tenantId: string): Promise<Attendance[]> {
-    return await db
-      .select()
-      .from(attendance)
-      .where(
-        and(
-          eq(attendance.classId, classId),
-          eq(attendance.date, date),
-          eq(attendance.tenantId, tenantId)
-        )
-      );
+    const attendance = await AttendanceModel.find({
+      classId,
+      date: new Date(date),
+      tenantId,
+    }).lean();
+    return attendance.map(toPlainObject);
   }
 
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
-    const [attendanceRecord] = await db
-      .insert(attendance)
-      .values(insertAttendance)
-      .returning();
-    return attendanceRecord;
+    const attendanceRecord = await AttendanceModel.create(insertAttendance);
+    return toPlainObject(attendanceRecord);
   }
 
   // Exams
   async getExamsByTenant(tenantId: string): Promise<Exam[]> {
-    return await db
-      .select()
-      .from(exams)
-      .where(eq(exams.tenantId, tenantId))
-      .orderBy(desc(exams.startDate));
+    const exams = await ExamModel.find({ tenantId })
+      .sort({ startDate: -1 })
+      .lean();
+    return exams.map(toPlainObject);
   }
 
   async createExam(insertExam: InsertExam): Promise<Exam> {
-    const [exam] = await db.insert(exams).values(insertExam).returning();
-    return exam;
+    const exam = await ExamModel.create(insertExam);
+    return toPlainObject(exam);
   }
 
   // Exam Results
   async getResultsByExam(examId: string, tenantId: string): Promise<ExamResult[]> {
-    return await db
-      .select()
-      .from(examResults)
-      .where(and(eq(examResults.examId, examId), eq(examResults.tenantId, tenantId)));
+    const results = await ExamResultModel.find({ examId, tenantId }).lean();
+    return results.map(toPlainObject);
   }
 
   async createExamResult(insertResult: InsertExamResult): Promise<ExamResult> {
-    const [result] = await db.insert(examResults).values(insertResult).returning();
-    return result;
+    const result = await ExamResultModel.create(insertResult);
+    return toPlainObject(result);
   }
 
   // Fee Structures
   async getFeeStructuresByTenant(tenantId: string): Promise<FeeStructure[]> {
-    return await db
-      .select()
-      .from(feeStructures)
-      .where(eq(feeStructures.tenantId, tenantId));
+    const feeStructures = await FeeStructureModel.find({ tenantId }).lean();
+    return feeStructures.map(toPlainObject);
   }
 
   async createFeeStructure(insertFeeStructure: InsertFeeStructure): Promise<FeeStructure> {
-    const [feeStructure] = await db
-      .insert(feeStructures)
-      .values(insertFeeStructure)
-      .returning();
-    return feeStructure;
+    const feeStructure = await FeeStructureModel.create(insertFeeStructure);
+    return toPlainObject(feeStructure);
   }
 
   // Fee Payments
   async getFeePaymentsByStudent(studentId: string, tenantId: string): Promise<FeePayment[]> {
-    return await db
-      .select()
-      .from(feePayments)
-      .where(
-        and(eq(feePayments.studentId, studentId), eq(feePayments.tenantId, tenantId))
-      );
+    const payments = await FeePaymentModel.find({ studentId, tenantId }).lean();
+    return payments.map(toPlainObject);
   }
 
   async createFeePayment(insertPayment: InsertFeePayment): Promise<FeePayment> {
-    const [payment] = await db.insert(feePayments).values(insertPayment).returning();
-    return payment;
+    const payment = await FeePaymentModel.create(insertPayment);
+    return toPlainObject(payment);
   }
 
   // Announcements
   async getAnnouncementsByTenant(tenantId: string): Promise<Announcement[]> {
-    return await db
-      .select()
-      .from(announcements)
-      .where(eq(announcements.tenantId, tenantId))
-      .orderBy(desc(announcements.publishedAt));
+    const announcements = await AnnouncementModel.find({ tenantId })
+      .sort({ publishedAt: -1 })
+      .lean();
+    return announcements.map(toPlainObject);
   }
 
   async createAnnouncement(insertAnnouncement: InsertAnnouncement): Promise<Announcement> {
-    const [announcement] = await db
-      .insert(announcements)
-      .values(insertAnnouncement)
-      .returning();
-    return announcement;
+    const announcement = await AnnouncementModel.create(insertAnnouncement);
+    return toPlainObject(announcement);
   }
 
   // User Preferences
   async getUserPreferences(userId: string): Promise<UserPreference | undefined> {
-    const [prefs] = await db
-      .select()
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, userId));
-    return prefs || undefined;
+    const prefs = await UserPreferenceModel.findOne({ userId }).lean();
+    return prefs ? toPlainObject(prefs) : undefined;
   }
 
   async createUserPreferences(insertPrefs: InsertUserPreference): Promise<UserPreference> {
-    const [prefs] = await db
-      .insert(userPreferences)
-      .values(insertPrefs)
-      .returning();
-    return prefs;
+    const prefs = await UserPreferenceModel.create(insertPrefs);
+    return toPlainObject(prefs);
   }
 
   async updateUserPreferences(userId: string, updatePrefs: Partial<InsertUserPreference>): Promise<UserPreference> {
-    const [prefs] = await db
-      .update(userPreferences)
-      .set({ ...updatePrefs, updatedAt: new Date() })
-      .where(eq(userPreferences.userId, userId))
-      .returning();
-    return prefs;
+    const prefs = await UserPreferenceModel.findOneAndUpdate(
+      { userId },
+      { ...updatePrefs, updatedAt: new Date() },
+      { new: true }
+    ).lean();
+    
+    if (!prefs) {
+      throw new Error('User preferences not found');
+    }
+    
+    return toPlainObject(prefs);
   }
 
   // User Profile
   async updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set(profileData)
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      profileData,
+      { new: true }
+    ).lean();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return toPlainObject(user);
   }
 }
 
