@@ -30,10 +30,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = generateToken({
-        id: user.id,
+        id: user._id,
         email: user.email,
         role: user.role,
-        tenantId: user.tenantId,
+        tenantId: user.tenantId || null,
       });
 
       res.cookie('auth_token', token, {
@@ -44,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         user: {
-          id: user.id,
+          id: user._id,
           email: user.email,
           role: user.role,
           firstName: user.firstName,
@@ -69,13 +69,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/admin/stats', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
-      const totalStudents = await storage.getStudentsCount(tenantId);
+      const [totalStudents, totalFaculty, monthlyRevenue, pendingFees] = await Promise.all([
+        storage.getStudentsCount(tenantId),
+        storage.getFacultyCount(tenantId),
+        storage.getMonthlyRevenue(tenantId),
+        storage.getPendingFees(tenantId),
+      ]);
       
       res.json({
         totalStudents,
-        totalFaculty: 87,
-        monthlyRevenue: 62450,
-        pendingFees: 8230,
+        totalFaculty,
+        monthlyRevenue,
+        pendingFees,
       });
     } catch (error) {
       console.error('Dashboard stats error:', error);
@@ -140,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const student = await storage.createStudent({
         ...studentData,
         tenantId,
-        userId: user.id,
+        userId: user._id,
       });
 
       res.status(201).json(student);
@@ -405,7 +410,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let prefs = await storage.getUserPreferences(userId);
       
       if (!prefs) {
-        prefs = await storage.createUserPreferences({ userId });
+        prefs = await storage.createUserPreferences({ 
+          userId,
+          emailNotifications: true,
+          pushNotifications: true,
+        });
       }
       
       res.json(prefs);

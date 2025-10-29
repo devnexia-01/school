@@ -127,13 +127,13 @@ async function seed() {
       classId: class10A._id,
       admissionNumber: 'STD001',
       rollNumber: '15',
-      dateOfBirth: '2008-05-15',
+      dateOfBirth: new Date('2008-05-15'),
       gender: 'female',
       bloodGroup: 'A+',
       parentId: parentUser._id,
       address: '456 Student Street, Springfield',
       emergencyContact: '+1-555-0104',
-      admissionDate: '2020-04-01',
+      admissionDate: new Date('2020-04-01'),
     });
     console.log('Created student');
 
@@ -142,8 +142,8 @@ async function seed() {
       tenantId: tenant._id,
       name: 'Mid-term Examination',
       type: 'mid_term',
-      startDate: '2025-02-01',
-      endDate: '2025-02-10',
+      startDate: new Date('2025-02-01'),
+      endDate: new Date('2025-02-10'),
       academicYear: '2024-2025',
       description: 'First semester mid-term exams',
       published: false,
@@ -155,9 +155,9 @@ async function seed() {
       tenantId: tenant._id,
       classId: class10A._id,
       name: 'Annual Tuition Fee',
-      amount: '5000',
+      amount: 5000,
       academicYear: '2024-2025',
-      dueDate: '2025-04-01',
+      dueDate: new Date('2025-04-01'),
       description: 'Annual tuition fee for Grade 10',
     });
     console.log('Created fee structure');
@@ -167,16 +167,16 @@ async function seed() {
       tenantId: tenant._id,
       title: 'Welcome to Springfield High School',
       content: 'We are excited to have you here. This is a demo announcement.',
-      targetRole: null,
+      targetRole: undefined,
       priority: 'high',
       publishedBy: adminUser._id,
-      expiresAt: null,
+      expiresAt: undefined,
     });
     console.log('Created announcement');
 
     // Create super admin (not tied to any tenant)
     const superAdminUser = await storage.createUser({
-      tenantId: null,
+      tenantId: undefined,
       email: 'superadmin@school.com',
       password: hashedPassword,
       role: 'super_admin',

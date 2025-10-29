@@ -99,6 +99,11 @@ export interface IStorage {
   
   // User Profile
   updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User>;
+  
+  // Dashboard Stats
+  getFacultyCount(tenantId: string): Promise<number>;
+  getMonthlyRevenue(tenantId: string): Promise<number>;
+  getPendingFees(tenantId: string): Promise<number>;
 }
 
 function toPlainObject(doc: any): any {
@@ -351,6 +356,60 @@ export class DatabaseStorage implements IStorage {
     }
     
     return toPlainObject(user);
+  }
+  
+  // Dashboard Stats
+  async getFacultyCount(tenantId: string): Promise<number> {
+    return await UserModel.countDocuments({ 
+      tenantId, 
+      role: { $in: ['faculty', 'principal'] }
+    });
+  }
+  
+  async getMonthlyRevenue(tenantId: string): Promise<number> {
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+    
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    
+    const result = await FeePaymentModel.aggregate([
+      {
+        $match: {
+          tenantId: tenantId as any,
+          paymentDate: { $gte: currentMonth, $lt: nextMonth },
+          status: 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+    
+    return result.length > 0 ? result[0].total : 0;
+  }
+  
+  async getPendingFees(tenantId: string): Promise<number> {
+    const result = await FeePaymentModel.aggregate([
+      {
+        $match: {
+          tenantId: tenantId as any,
+          status: { $in: ['pending', 'overdue'] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+    
+    return result.length > 0 ? result[0].total : 0;
   }
 }
 
