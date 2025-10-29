@@ -57,6 +57,8 @@ export interface IStorage {
   getStudent(id: string, tenantId?: string): Promise<Student | undefined>;
   getStudentsByClass(classId: string, tenantId: string): Promise<Student[]>;
   getStudentsByTenant(tenantId: string): Promise<Student[]>;
+  getStudentsWithDetailsOptimized(tenantId: string, limit?: number, offset?: number): Promise<any[]>;
+  getStudentsCount(tenantId: string): Promise<number>;
   createStudent(student: InsertStudent): Promise<Student>;
   
   // Classes
@@ -151,6 +153,58 @@ export class DatabaseStorage implements IStorage {
 
   async getStudentsByTenant(tenantId: string): Promise<Student[]> {
     return await db.select().from(students).where(eq(students.tenantId, tenantId));
+  }
+
+  async getStudentsWithDetailsOptimized(tenantId: string, limit?: number, offset?: number): Promise<any[]> {
+    let query = db
+      .select({
+        id: students.id,
+        userId: students.userId,
+        admissionNumber: students.admissionNumber,
+        rollNumber: students.rollNumber,
+        classId: students.classId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+        active: users.active,
+        avatar: users.avatar,
+        className: classes.name,
+      })
+      .from(students)
+      .leftJoin(users, eq(students.userId, users.id))
+      .leftJoin(classes, eq(students.classId, classes.id))
+      .where(eq(students.tenantId, tenantId))
+      .orderBy(students.admissionNumber);
+    
+    if (limit !== undefined) {
+      query = query.limit(limit) as any;
+    }
+    if (offset !== undefined) {
+      query = query.offset(offset) as any;
+    }
+    
+    const result = await query;
+    
+    return result.map(row => ({
+      id: row.id,
+      name: `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Unknown',
+      admissionNumber: row.admissionNumber,
+      class: row.className || 'Not assigned',
+      rollNumber: row.rollNumber || '',
+      email: row.email || '',
+      phone: row.phone || '',
+      status: row.active ? 'active' : 'inactive',
+      avatar: row.avatar || null,
+    }));
+  }
+
+  async getStudentsCount(tenantId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(students)
+      .where(eq(students.tenantId, tenantId));
+    return result[0]?.count || 0;
   }
 
   async createStudent(insertStudent: InsertStudent): Promise<Student> {

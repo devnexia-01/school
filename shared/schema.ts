@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, date, decimal, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, date, decimal, boolean, pgEnum, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -53,7 +53,11 @@ export const users = pgTable("users", {
   avatar: text("avatar"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  emailIdx: index("users_email_idx").on(table.email),
+  tenantIdIdx: index("users_tenant_id_idx").on(table.tenantId),
+  roleIdx: index("users_role_idx").on(table.role),
+}));
 
 // Classes Table
 export const classes = pgTable("classes", {
@@ -66,7 +70,9 @@ export const classes = pgTable("classes", {
   classTeacherId: varchar("class_teacher_id", { length: 255 }).references(() => users.id),
   academicYear: varchar("academic_year", { length: 20 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("classes_tenant_id_idx").on(table.tenantId),
+}));
 
 // Subjects Table
 export const subjects = pgTable("subjects", {
@@ -76,7 +82,9 @@ export const subjects = pgTable("subjects", {
   code: varchar("code", { length: 50 }).notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("subjects_tenant_id_idx").on(table.tenantId),
+}));
 
 // Students Table
 export const students = pgTable("students", {
@@ -94,7 +102,11 @@ export const students = pgTable("students", {
   emergencyContact: varchar("emergency_contact", { length: 20 }),
   admissionDate: date("admission_date").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("students_tenant_id_idx").on(table.tenantId),
+  userIdIdx: index("students_user_id_idx").on(table.userId),
+  classIdIdx: index("students_class_id_idx").on(table.classId),
+}));
 
 // Attendance Table
 export const attendance = pgTable("attendance", {
@@ -107,7 +119,10 @@ export const attendance = pgTable("attendance", {
   markedBy: varchar("marked_by", { length: 255 }).references(() => users.id),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("attendance_tenant_id_idx").on(table.tenantId),
+  classDateIdx: index("attendance_class_date_idx").on(table.classId, table.date),
+}));
 
 // Exams Table
 export const exams = pgTable("exams", {
@@ -121,7 +136,9 @@ export const exams = pgTable("exams", {
   description: text("description"),
   published: boolean("published").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("exams_tenant_id_idx").on(table.tenantId),
+}));
 
 // Exam Results Table
 export const examResults = pgTable("exam_results", {
@@ -179,7 +196,9 @@ export const announcements = pgTable("announcements", {
   publishedAt: timestamp("published_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantIdIdx: index("announcements_tenant_id_idx").on(table.tenantId),
+}));
 
 // Class-Subject Mapping
 export const classSubjects = pgTable("class_subjects", {

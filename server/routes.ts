@@ -69,10 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/admin/stats', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
-      const students = await storage.getStudentsByTenant(tenantId);
+      const totalStudents = await storage.getStudentsCount(tenantId);
       
       res.json({
-        totalStudents: students.length,
+        totalStudents,
         totalFaculty: 87,
         monthlyRevenue: 62450,
         pendingFees: 8230,
@@ -87,27 +87,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/students', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
-      const studentsData = await storage.getStudentsByTenant(tenantId);
       
-      // Enhance with user and class information
-      const students = await Promise.all(studentsData.map(async (student) => {
-        const user = await storage.getUser(student.userId);
-        const classData = student.classId ? await storage.getClass(student.classId, tenantId) : null;
-        
-        return {
-          id: student.id,
-          name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-          admissionNumber: student.admissionNumber,
-          class: classData?.name || 'Not assigned',
-          rollNumber: student.rollNumber || '',
-          email: user?.email || '',
-          phone: user?.phone || '',
-          status: user?.active ? 'active' : 'inactive',
-          avatar: user?.avatar || null,
-        };
-      }));
+      // Sanitize pagination parameters
+      let limit: number | undefined = undefined;
+      let offset: number | undefined = undefined;
       
-      res.json({ students, total: students.length });
+      if (req.query.limit) {
+        const parsedLimit = parseInt(req.query.limit as string);
+        if (!isNaN(parsedLimit) && parsedLimit > 0) {
+          limit = Math.min(parsedLimit, 1000); // Cap at 1000
+        }
+      }
+      
+      if (req.query.offset) {
+        const parsedOffset = parseInt(req.query.offset as string);
+        if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+          offset = parsedOffset;
+        }
+      }
+      
+      const [students, total] = await Promise.all([
+        storage.getStudentsWithDetailsOptimized(tenantId, limit, offset),
+        storage.getStudentsCount(tenantId)
+      ]);
+      
+      res.json({ students, total });
     } catch (error) {
       console.error('Get students error:', error);
       res.status(500).json({ error: 'Internal server error' });
