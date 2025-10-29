@@ -6,13 +6,22 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
 
 ## Recent Changes
 
+### MongoDB Migration (October 29, 2025)
+- **Database Migration**: Successfully migrated from PostgreSQL (Drizzle ORM) to MongoDB (Mongoose)
+- **Schema Conversion**: Converted all database schemas from Drizzle pgTable definitions to Mongoose schemas
+- **Storage Layer Refactor**: Updated entire storage layer to use Mongoose models with proper ObjectId handling
+- **Real Data Implementation**: Removed all dummy/mock data from dashboard stats endpoint
+- **New Analytics Methods**: Added `getFacultyCount`, `getMonthlyRevenue`, and `getPendingFees` methods using MongoDB aggregations
+- **Authentication Updates**: Fixed all API routes to use MongoDB `_id` instead of PostgreSQL `id`
+- **Database Seeding**: Updated seed script to work with MongoDB and populate demo data
+
 ### Performance Optimizations (October 29, 2025)
-- **Fixed N+1 Query Problem**: Replaced sequential database queries in `/api/students` endpoint with a single JOIN query, reducing database round-trips from N+1 to 1
+- **Fixed N+1 Query Problem**: Replaced sequential database queries in `/api/students` endpoint with optimized Mongoose populate queries
 - **Lazy Route Loading**: Implemented React.lazy() and Suspense for all frontend routes to reduce initial bundle size and improve page load times
-- **Database Indexes**: Added indexes to frequently queried fields (tenantId, userId, classId, email) across all major tables to speed up query execution
+- **Database Indexes**: Added indexes to frequently queried fields (tenantId, userId, classId, email) across all major collections
 - **Pagination Support**: Added limit/offset pagination to student list endpoint with parameter validation (capped at 1000, rejects invalid values)
 - **Deterministic Ordering**: Added orderBy clause to student queries for consistent pagination results
-- **Optimized Dashboard Stats**: Replaced full table scan with COUNT query for student totals
+- **Optimized Dashboard Stats**: Using MongoDB aggregations and count queries for real-time statistics
 
 ## User Preferences
 
@@ -65,47 +74,53 @@ Preferred communication style: Simple, everyday language.
 - Middleware-enforced tenant filtering on all queries
 - Super admin role bypasses tenant isolation for system-wide management
 
-**Database ORM**: Drizzle ORM with schema-first approach.
+**Database ORM**: Mongoose ODM (Object Document Mapper) for MongoDB with schema-based modeling.
 
 **Key Architectural Decisions**:
 - Separation of concerns with storage layer abstraction (`storage.ts` interface)
 - Middleware pipeline for logging, authentication, and tenant isolation
 - Type-safe schema definitions shared between client and server (`shared/schema.ts`)
-- Database migrations managed through Drizzle Kit
-- Optimized JOIN queries to eliminate N+1 query patterns
+- Mongoose models with Zod validation for request data
+- Optimized populate queries to eliminate N+1 query patterns
+- MongoDB aggregations for analytics and statistics
 - Pagination support with parameter validation for list endpoints
 
 ### Data Storage
 
-**Database**: PostgreSQL (via Neon serverless)
+**Database**: MongoDB (cloud-hosted via MongoDB Atlas or similar)
 
 **Connection**: 
-- Neon serverless driver with WebSocket support
-- Connection pooling via `@neondatabase/serverless`
-- Environment-based configuration (`DATABASE_URL`)
+- Mongoose ODM for MongoDB
+- Connection string via `MONGODB_URI` environment variable
+- Automatic reconnection handling with connection pooling
+- Environment-based configuration
 
 **Schema Design**:
-- Multi-tenant architecture with `tenants` as root table
-- User roles managed via enum: `super_admin`, `admin`, `principal`, `faculty`, `student`, `parent`
-- Core entities: tenants, users, students, classes, subjects, attendance, exams, exam results, fee structures, fee payments, announcements
-- Relationship modeling using Drizzle relations API
-- Soft deletes implemented through cascade constraints
+- Multi-tenant architecture with `tenants` collection as root
+- User roles managed via string enums: `super_admin`, `admin`, `principal`, `faculty`, `student`, `parent`
+- Core collections: tenants, users, students, classes, subjects, attendance, exams, examResults, feeStructures, feePayments, announcements
+- Document references using ObjectId for relationships
+- Embedded documents where appropriate for performance
 
-**Schema Validation**: Zod schemas generated from Drizzle schema definitions using `drizzle-zod`.
+**Schema Validation**: 
+- Mongoose schema definitions with built-in validation
+- Zod schemas for API request validation
+- Type-safe TypeScript interfaces exported from schema
 
 **Key Design Decisions**:
-- UUID primary keys for all entities
-- Timestamp tracking (`createdAt`) on all tables
-- Enum types for standardized values (user roles, attendance status, gender, fee status, exam types)
-- Foreign key constraints with cascade delete for data integrity
-- Database indexes on frequently queried columns (tenantId, userId, classId, email, composite indexes for date-based queries)
+- MongoDB ObjectId (`_id`) as primary keys for all documents
+- Timestamp tracking (`createdAt`, `updatedAt` where needed) on all collections
+- String enums for standardized values (user roles, attendance status, gender, fee status, exam types)
+- Mongoose schema references with populate for relational data
+- Database indexes on frequently queried fields (tenantId, userId, classId, email, composite indexes for date-based queries)
+- MongoDB aggregations for analytics and dashboard statistics
 
 ### External Dependencies
 
 **Database Services**:
-- Neon PostgreSQL - serverless PostgreSQL hosting
-- Drizzle ORM - TypeScript ORM and query builder
-- Drizzle Kit - schema migrations and database management
+- MongoDB - NoSQL document database
+- Mongoose - MongoDB object modeling for Node.js
+- MongoDB Atlas (or compatible) - cloud-hosted MongoDB service
 
 **Authentication**:
 - jsonwebtoken - JWT token generation and verification
