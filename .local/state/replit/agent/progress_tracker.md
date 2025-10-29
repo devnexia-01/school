@@ -10,3 +10,4 @@
 [x] 10. Created new storage methods for fetching real data (attendance stats, performance, fee collection, class distribution, recent admissions, activities)
 [x] 11. Created new backend API routes for all dashboard and reports data
 [x] 12. Updated all frontend components to fetch and display real data from MongoDB database
+[x] 13. Confirmed database schema - no separate Teacher table, teachers are Users with role='faculty'
