@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Globe, Clock, Save } from 'lucide-react';
+import { Bell, Globe, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Preferences() {
@@ -115,6 +115,7 @@ export default function Preferences() {
               </div>
               <Switch
                 id="emailNotifications"
+                data-testid="switch-email-notifications"
                 checked={formData.emailNotifications}
                 onCheckedChange={(checked) => 
                   setFormData({ ...formData, emailNotifications: checked })
@@ -130,6 +131,7 @@ export default function Preferences() {
               </div>
               <Switch
                 id="pushNotifications"
+                data-testid="switch-push-notifications"
                 checked={formData.pushNotifications}
                 onCheckedChange={(checked) => 
                   setFormData({ ...formData, pushNotifications: checked })
@@ -143,7 +145,7 @@ export default function Preferences() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Appearance & Language
+              Appearance
             </CardTitle>
             <CardDescription>Customize how the app looks and feels</CardDescription>
           </CardHeader>
@@ -154,7 +156,7 @@ export default function Preferences() {
                 value={formData.theme}
                 onValueChange={(value) => setFormData({ ...formData, theme: value })}
               >
-                <SelectTrigger id="theme">
+                <SelectTrigger id="theme" data-testid="select-theme">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -164,65 +166,25 @@ export default function Preferences() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
-              <Select
-                value={formData.language}
-                onValueChange={(value) => setFormData({ ...formData, language: value })}
-              >
-                <SelectTrigger id="language">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="de">German</SelectItem>
-                  <SelectItem value="hi">Hindi</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Regional Settings
+              <Globe className="h-5 w-5" />
+              Date Format
             </CardTitle>
-            <CardDescription>Set your timezone and date format</CardDescription>
+            <CardDescription>Customize how dates are displayed</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select
-                value={formData.timezone}
-                onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-              >
-                <SelectTrigger id="timezone">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                  <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                  <SelectItem value="America/Chicago">Central Time</SelectItem>
-                  <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                  <SelectItem value="Europe/London">London</SelectItem>
-                  <SelectItem value="Asia/Kolkata">India Standard Time</SelectItem>
-                  <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="dateFormat">Date Format</Label>
               <Select
                 value={formData.dateFormat}
                 onValueChange={(value) => setFormData({ ...formData, dateFormat: value })}
               >
-                <SelectTrigger id="dateFormat">
+                <SelectTrigger id="dateFormat" data-testid="select-dateformat">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -236,7 +198,7 @@ export default function Preferences() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={updatePreferencesMutation.isPending}>
+          <Button type="submit" data-testid="button-save-preferences" disabled={updatePreferencesMutation.isPending}>
             <Save className="mr-2 h-4 w-4" />
             {updatePreferencesMutation.isPending ? 'Saving...' : 'Save Preferences'}
           </Button>
