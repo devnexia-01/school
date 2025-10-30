@@ -12,6 +12,11 @@ import {
   AnnouncementModel,
   ClassSubjectModel,
   UserPreferenceModel,
+  MessageModel,
+  NotificationModel,
+  TimetableModel,
+  StudentTransportModel,
+  TransportRouteModel,
   type User,
   type InsertUser,
   type Tenant,
@@ -38,6 +43,8 @@ import {
   type InsertClassSubject,
   type UserPreference,
   type InsertUserPreference,
+  type Message,
+  type Notification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -122,6 +129,24 @@ export interface IStorage {
   getPerformanceData(tenantId: string): Promise<any[]>;
   getClassDistribution(tenantId: string): Promise<any[]>;
   getFeeCollectionStats(tenantId: string, months?: number): Promise<any>;
+  
+  // Messages
+  getMessagesByUser(userId: string, tenantId: string): Promise<Message[]>;
+  getUnreadMessagesCount(userId: string, tenantId: string): Promise<number>;
+  createMessage(message: Partial<Message>): Promise<Message>;
+  markMessageAsRead(messageId: string, userId: string): Promise<void>;
+  
+  // Notifications
+  getNotificationsByUser(userId: string, tenantId: string, limit?: number): Promise<Notification[]>;
+  getUnreadNotificationsCount(userId: string, tenantId: string): Promise<number>;
+  createNotification(notification: Partial<Notification>): Promise<Notification>;
+  markNotificationAsRead(notificationId: string, userId: string): Promise<void>;
+  
+  // Student specific queries
+  getStudentTimetable(studentId: string, tenantId: string): Promise<any[]>;
+  getStudentExamResults(studentId: string, tenantId: string): Promise<any[]>;
+  getStudentTransportDetails(studentId: string, tenantId: string): Promise<any>;
+  getStudentByUserId(userId: string, tenantId: string): Promise<Student | undefined>;
   
   // Faculty Management
   getFacultyByTenant(tenantId: string): Promise<any[]>;
@@ -852,6 +877,125 @@ export class DatabaseStorage implements IStorage {
     if (!result) {
       throw new Error('User not found or access denied');
     }
+  }
+  
+  // Messages
+  async getMessagesByUser(userId: string, tenantId: string): Promise<Message[]> {
+    const messages = await MessageModel.find({
+      tenantId,
+      recipientId: userId
+    })
+    .populate('senderId', 'firstName lastName email')
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+    
+    return messages.map(toPlainObject);
+  }
+  
+  async getUnreadMessagesCount(userId: string, tenantId: string): Promise<number> {
+    return await MessageModel.countDocuments({
+      tenantId,
+      recipientId: userId,
+      read: false
+    });
+  }
+  
+  async createMessage(message: Partial<Message>): Promise<Message> {
+    const newMessage = await MessageModel.create(message);
+    return toPlainObject(newMessage.toObject());
+  }
+  
+  async markMessageAsRead(messageId: string, userId: string): Promise<void> {
+    await MessageModel.findOneAndUpdate(
+      { _id: messageId, recipientId: userId },
+      { read: true }
+    );
+  }
+  
+  // Notifications
+  async getNotificationsByUser(userId: string, tenantId: string, limit: number = 20): Promise<Notification[]> {
+    const notifications = await NotificationModel.find({
+      tenantId,
+      userId
+    })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+    
+    return notifications.map(toPlainObject);
+  }
+  
+  async getUnreadNotificationsCount(userId: string, tenantId: string): Promise<number> {
+    return await NotificationModel.countDocuments({
+      tenantId,
+      userId,
+      read: false
+    });
+  }
+  
+  async createNotification(notification: Partial<Notification>): Promise<Notification> {
+    const newNotification = await NotificationModel.create(notification);
+    return toPlainObject(newNotification.toObject());
+  }
+  
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<void> {
+    await NotificationModel.findOneAndUpdate(
+      { _id: notificationId, userId },
+      { read: true }
+    );
+  }
+  
+  // Student specific queries
+  async getStudentByUserId(userId: string, tenantId: string): Promise<Student | undefined> {
+    const student = await StudentModel.findOne({ userId, tenantId }).lean();
+    return student ? toPlainObject(student) : undefined;
+  }
+  
+  async getStudentTimetable(studentId: string, tenantId: string): Promise<any[]> {
+    const student = await StudentModel.findOne({ _id: studentId, tenantId });
+    if (!student || !student.classId) {
+      return [];
+    }
+    
+    const timetable = await TimetableModel.find({
+      tenantId,
+      classId: student.classId
+    })
+    .populate('subjectId', 'name code')
+    .populate('teacherId', 'firstName lastName')
+    .sort({ day: 1, startTime: 1 })
+    .lean();
+    
+    return timetable.map(toPlainObject);
+  }
+  
+  async getStudentExamResults(studentId: string, tenantId: string): Promise<any[]> {
+    const results = await ExamResultModel.find({
+      tenantId,
+      studentId
+    })
+    .populate('examId', 'name type startDate endDate')
+    .populate('subjectId', 'name code')
+    .sort({ createdAt: -1 })
+    .lean();
+    
+    return results.map(toPlainObject);
+  }
+  
+  async getStudentTransportDetails(studentId: string, tenantId: string): Promise<any> {
+    const transport = await StudentTransportModel.findOne({
+      tenantId,
+      studentId
+    })
+    .populate('routeId')
+    .lean();
+    
+    if (!transport) {
+      return null;
+    }
+    
+    return toPlainObject(transport);
   }
 }
 

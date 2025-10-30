@@ -1,319 +1,239 @@
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
-import { DataTable } from '@/components/shared/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Plus, Edit2, Trash2, Bus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Bus, MapPin, Clock, Phone, User, IndianRupee } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 
 export default function Transport() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [isAddRouteDialogOpen, setIsAddRouteDialogOpen] = useState(false);
+  const isStudent = user?.role === 'student';
 
-  const canManageTransport = user && ['admin'].includes(user.role);
+  const { data: transportData, isLoading } = useQuery({
+    queryKey: isStudent ? ['/api/student/transport'] : [],
+    enabled: isStudent,
+  });
 
-  const routes = [
-    {
-      id: '1',
-      routeName: 'Route A - North Zone',
-      routeNumber: 'RT-001',
-      driverName: 'John Smith',
-      driverPhone: '+1-555-1001',
-      vehicleNumber: 'SCH-BUS-01',
-      capacity: 45,
-      occupancy: 38,
-      fare: 50,
-      stops: 'Main Street, Park Avenue, Hill Road, School Gate',
-      status: 'active',
-    },
-    {
-      id: '2',
-      routeName: 'Route B - South Zone',
-      routeNumber: 'RT-002',
-      driverName: 'Mike Johnson',
-      driverPhone: '+1-555-1002',
-      vehicleNumber: 'SCH-BUS-02',
-      capacity: 45,
-      occupancy: 42,
-      fare: 50,
-      stops: 'Lake View, Shopping Mall, Central Park, School Gate',
-      status: 'active',
-    },
-    {
-      id: '3',
-      routeName: 'Route C - East Zone',
-      routeNumber: 'RT-003',
-      driverName: 'Robert Brown',
-      driverPhone: '+1-555-1003',
-      vehicleNumber: 'SCH-BUS-03',
-      capacity: 50,
-      occupancy: 35,
-      fare: 45,
-      stops: 'Station Road, Industrial Area, River Side, School Gate',
-      status: 'active',
-    },
-  ];
+  const transport = transportData?.transport;
+  const route = transport?.routeId;
 
-  const studentAllocations = [
-    { id: '1', studentName: 'Sarah Johnson', rollNumber: '15', class: '10-A', route: 'Route A - North Zone', pickupStop: 'Main Street', status: 'active' },
-    { id: '2', studentName: 'Michael Chen', rollNumber: '08', class: '10-A', route: 'Route A - North Zone', pickupStop: 'Park Avenue', status: 'active' },
-    { id: '3', studentName: 'Emma Williams', rollNumber: '22', class: '9-B', route: 'Route B - South Zone', pickupStop: 'Lake View', status: 'active' },
-    { id: '4', studentName: 'James Brown', rollNumber: '12', class: '10-A', route: 'Route C - East Zone', pickupStop: 'Station Road', status: 'active' },
-  ];
-
-  const handleAddRoute = () => {
-    toast({
-      title: 'Route Added',
-      description: 'New transport route has been added successfully.',
-    });
-    setIsAddRouteDialogOpen(false);
-  };
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 max-w-5xl">
+          <Skeleton className="h-12 w-64" />
+          <Skeleton className="h-96" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 max-w-7xl">
+      <div className="p-6 space-y-6 max-w-5xl">
         <Breadcrumb items={[{ label: 'Transport Management' }]} />
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold">Transport Management</h1>
-            <p className="text-muted-foreground mt-1">Manage school transport routes and student allocations</p>
-          </div>
-          {canManageTransport && (
-            <Dialog open={isAddRouteDialogOpen} onOpenChange={setIsAddRouteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-route">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Route
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Transport Route</DialogTitle>
-                  <DialogDescription>Enter the details of the new transport route</DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="routeName">Route Name</Label>
-                    <Input id="routeName" placeholder="Route A - North Zone" data-testid="input-route-name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="routeNumber">Route Number</Label>
-                    <Input id="routeNumber" placeholder="RT-001" data-testid="input-route-number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleNumber">Vehicle Number</Label>
-                    <Input id="vehicleNumber" placeholder="SCH-BUS-01" data-testid="input-vehicle-number" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="capacity">Capacity</Label>
-                    <Input id="capacity" type="number" placeholder="45" data-testid="input-capacity" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driverName">Driver Name</Label>
-                    <Input id="driverName" placeholder="John Smith" data-testid="input-driver-name" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="driverPhone">Driver Phone</Label>
-                    <Input id="driverPhone" placeholder="+1-555-0000" data-testid="input-driver-phone" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fare">Monthly Fare (₹)</Label>
-                    <Input id="fare" type="number" placeholder="50" data-testid="input-fare" />
-                  </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="stops">Stops (comma separated)</Label>
-                    <Input id="stops" placeholder="Main Street, Park Avenue, Hill Road" data-testid="input-stops" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddRouteDialogOpen(false)} data-testid="button-cancel">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddRoute} data-testid="button-save-route">
-                    Add Route
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+        <div>
+          <h1 className="text-3xl font-semibold">Transport Details</h1>
+          <p className="text-muted-foreground mt-1">
+            Your school transport information and schedule
+          </p>
         </div>
 
-        <Tabs defaultValue="routes" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="routes" data-testid="tab-routes">Routes</TabsTrigger>
-            <TabsTrigger value="allocations" data-testid="tab-allocations">Student Allocations</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="routes" className="space-y-4">
+        {transport && route ? (
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Transport Routes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataTable
-                  data={routes}
-                  emptyMessage="No routes found"
-                  columns={[
-                    {
-                      key: 'route',
-                      header: 'Route Details',
-                      cell: (item) => (
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <Bus className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{item.routeName}</p>
-                            <p className="text-sm text-muted-foreground">{item.routeNumber}</p>
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'vehicle',
-                      header: 'Vehicle',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.vehicleNumber}</p>
-                          <p className="text-sm text-muted-foreground">Capacity: {item.capacity}</p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'driver',
-                      header: 'Driver',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.driverName}</p>
-                          <p className="text-sm text-muted-foreground">{item.driverPhone}</p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'occupancy',
-                      header: 'Occupancy',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.occupancy}/{item.capacity}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {Math.round((item.occupancy / item.capacity) * 100)}% filled
-                          </p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'fare',
-                      header: 'Fare',
-                      cell: (item) => `${formatCurrencyINR(item.fare)}/month`,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (item) => (
-                        <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                          {item.status}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      cell: (item) => canManageTransport ? (
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" data-testid={`button-edit-route-${item.id}`}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" data-testid={`button-delete-route-${item.id}`}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ) : null,
-                    },
-                  ]}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="allocations" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Student Transport Allocations</CardTitle>
-                  {canManageTransport && (
-                    <Button size="sm" data-testid="button-allocate-student">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Allocate Student
-                    </Button>
-                  )}
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Bus className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Assigned Route</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {route.routeName || 'Route Information'}
+                    </p>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <DataTable
-                  data={studentAllocations}
-                  emptyMessage="No student allocations found"
-                  columns={[
-                    {
-                      key: 'student',
-                      header: 'Student',
-                      cell: (item) => (
-                        <div>
-                          <p className="font-medium">{item.studentName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Roll: {item.rollNumber} • {item.class}
-                          </p>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: 'route',
-                      header: 'Route',
-                      cell: (item) => item.route,
-                    },
-                    {
-                      key: 'pickupStop',
-                      header: 'Pickup Stop',
-                      cell: (item) => item.pickupStop,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (item) => (
-                        <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                          {item.status}
-                        </Badge>
-                      ),
-                    },
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      cell: (item) => canManageTransport ? (
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" data-testid={`button-edit-allocation-${item.id}`}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" data-testid={`button-remove-allocation-${item.id}`}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ) : null,
-                    },
-                  ]}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Bus className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Bus Number</p>
+                        <p className="font-semibold" data-testid="text-vehicle-number">
+                          {route.vehicleNumber || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pickup Stop</p>
+                        <p className="font-semibold" data-testid="text-pickup-stop">
+                          {transport.pickupStop || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pickup Time</p>
+                        <p className="font-semibold text-primary" data-testid="text-pickup-time">
+                          {transport.pickupTime || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <User className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Driver</p>
+                        <p className="font-semibold" data-testid="text-driver-name">
+                          {route.driverName || 'Not assigned'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Driver Contact</p>
+                        <p className="font-semibold" data-testid="text-driver-phone">
+                          {route.driverPhone || 'Not available'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Bus className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Vehicle Capacity</p>
+                        <p className="font-semibold">
+                          {route.capacity ? `${route.capacity} seats` : 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-500/10 rounded-lg">
+                    <MapPin className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Route Details</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">Complete route information</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Route Number</p>
+                    <Badge variant="outline" className="text-sm" data-testid="badge-route-number">
+                      {route.routeNumber || 'N/A'}
+                    </Badge>
+                  </div>
+
+                  {route.stops && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">All Stops</p>
+                      <div className="flex flex-wrap gap-2">
+                        {route.stops.split(',').map((stop: string, index: number) => (
+                          <Badge
+                            key={index}
+                            variant={
+                              stop.trim() === transport.pickupStop?.trim() ? 'default' : 'secondary'
+                            }
+                            className="text-sm"
+                            data-testid={`stop-${index}`}
+                          >
+                            {stop.trim()}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Your stop is highlighted
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Status</p>
+                    <Badge
+                      variant={transport.status === 'active' ? 'default' : 'secondary'}
+                      data-testid="badge-transport-status"
+                    >
+                      {transport.status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-500/10 rounded-lg">
+                    <IndianRupee className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Fee Information</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Monthly transport charges
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold" data-testid="text-transport-fee">
+                    {route.fare ? formatCurrencyINR(route.fare) : 'N/A'}
+                  </p>
+                  <p className="text-muted-foreground">per month</p>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Fee is included in your monthly school fee payment
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="p-4 bg-muted rounded-full">
+                    <Bus className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">No Transport Allocated</h3>
+                  <p className="text-muted-foreground mt-2">
+                    You don't have any transport route assigned yet.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Please contact the administration office if you need school transport services.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );

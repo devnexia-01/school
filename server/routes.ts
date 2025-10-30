@@ -674,6 +674,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Messages Routes ============
+  app.get('/api/messages', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const messages = await storage.getMessagesByUser(userId, tenantId);
+      res.json({ messages });
+    } catch (error) {
+      console.error('Get messages error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/messages/unread-count', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const count = await storage.getUnreadMessagesCount(userId, tenantId);
+      res.json({ count });
+    } catch (error) {
+      console.error('Get unread messages count error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/messages', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const senderId = req.user!.id;
+      const { recipientId, subject, content } = req.body;
+      
+      const message = await storage.createMessage({
+        tenantId,
+        senderId,
+        recipientId,
+        subject,
+        content,
+        read: false,
+        createdAt: new Date(),
+      });
+      
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Create message error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/messages/:id/read', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.markMessageAsRead(req.params.id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Mark message as read error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Notifications Routes ============
+  app.get('/api/notifications', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const notifications = await storage.getNotificationsByUser(userId, tenantId, limit);
+      res.json({ notifications });
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/notifications/unread-count', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const count = await storage.getUnreadNotificationsCount(userId, tenantId);
+      res.json({ count });
+    } catch (error) {
+      console.error('Get unread notifications count error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/notifications/:id/read', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.markNotificationAsRead(req.params.id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Mark notification as read error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Student Dashboard Routes ============
+  app.get('/api/student/timetable', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const timetable = await storage.getStudentTimetable(student._id, tenantId);
+      res.json({ timetable });
+    } catch (error) {
+      console.error('Get student timetable error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/student/exam-results', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const results = await storage.getStudentExamResults(student._id, tenantId);
+      res.json({ results });
+    } catch (error) {
+      console.error('Get student exam results error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/student/transport', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const transport = await storage.getStudentTransportDetails(student._id, tenantId);
+      res.json({ transport });
+    } catch (error) {
+      console.error('Get student transport error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/student/profile', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const { password, ...userWithoutPassword } = user;
+      res.json({ student, user: userWithoutPassword });
+    } catch (error) {
+      console.error('Get student profile error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

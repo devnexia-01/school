@@ -151,6 +151,9 @@ const StudentSchema = new Schema({
   gender: { type: String, enum: Object.values(Gender), required: true },
   bloodGroup: String,
   parentId: { type: Schema.Types.ObjectId, ref: 'User' },
+  fatherName: String,
+  motherName: String,
+  parentContact: String,
   address: String,
   emergencyContact: String,
   admissionDate: { type: Date, required: true },
@@ -354,6 +357,26 @@ const UserPreferenceSchema = new Schema({
   updatedAt: { type: Date, default: Date.now, required: true },
 });
 
+const MessageSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  recipientId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  subject: { type: String, required: true },
+  content: { type: String, required: true },
+  read: { type: Boolean, default: false, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
+});
+
+const NotificationSchema = new Schema({
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  type: { type: String, default: 'info' },
+  read: { type: Boolean, default: false, required: true },
+  createdAt: { type: Date, default: Date.now, required: true },
+});
+
 // Models
 export const TenantModel = mongoose.model('Tenant', TenantSchema);
 export const UserModel = mongoose.model('User', UserSchema);
@@ -375,6 +398,8 @@ export const LeaveRequestModel = mongoose.model('LeaveRequest', LeaveRequestSche
 export const SupportTicketModel = mongoose.model('SupportTicket', SupportTicketSchema);
 export const SubscriptionModel = mongoose.model('Subscription', SubscriptionSchema);
 export const UserPreferenceModel = mongoose.model('UserPreference', UserPreferenceSchema);
+export const MessageModel = mongoose.model('Message', MessageSchema);
+export const NotificationModel = mongoose.model('Notification', NotificationSchema);
 
 // Types
 export type Tenant = {
@@ -435,6 +460,9 @@ export type Student = {
   gender: string;
   bloodGroup?: string;
   parentId?: string;
+  fatherName?: string;
+  motherName?: string;
+  parentContact?: string;
   address?: string;
   emergencyContact?: string;
   admissionDate: Date;
@@ -540,6 +568,28 @@ export type UserPreference = {
   dateFormat?: string;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type Message = {
+  _id: string;
+  tenantId: string;
+  senderId: string;
+  recipientId: string;
+  subject: string;
+  content: string;
+  read: boolean;
+  createdAt: Date;
+};
+
+export type Notification = {
+  _id: string;
+  tenantId: string;
+  userId: string;
+  title: string;
+  message: string;
+  type?: string;
+  read: boolean;
+  createdAt: Date;
 };
 
 // Insert types (omit _id and fields with defaults)

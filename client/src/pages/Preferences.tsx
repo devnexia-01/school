@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Globe, Clock, Calendar, Save } from 'lucide-react';
+import { Bell, Globe, Clock, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Preferences() {
@@ -76,18 +78,23 @@ export default function Preferences() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Preferences</h1>
-        <p className="text-muted-foreground">Customize your experience</p>
-      </div>
+    <AppLayout>
+      <div className="p-6 max-w-4xl space-y-6">
+        <Breadcrumb items={[{ label: 'Preferences' }]} />
+        
+        <div>
+          <h1 className="text-3xl font-semibold">Preferences</h1>
+          <p className="text-muted-foreground mt-1">Customize your experience</p>
+        </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
@@ -235,6 +242,7 @@ export default function Preferences() {
           </Button>
         </div>
       </form>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

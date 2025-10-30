@@ -1,214 +1,186 @@
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Clock } from 'lucide-react';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const PERIODS = [
+  { label: 'Period 1', time: '08:00 - 09:00' },
+  { label: 'Period 2', time: '09:00 - 10:00' },
+  { label: 'Period 3', time: '10:00 - 11:00' },
+  { label: 'Break', time: '11:00 - 11:15' },
+  { label: 'Period 4', time: '11:15 - 12:15' },
+  { label: 'Period 5', time: '12:15 - 01:15' },
+  { label: 'Lunch', time: '01:15 - 02:00' },
+  { label: 'Period 6', time: '02:00 - 03:00' },
+];
 
 export default function Timetable() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [selectedClass, setSelectedClass] = useState('10-A');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  const { data: timetableData, isLoading } = useQuery({
+    queryKey: user?.role === 'student' ? ['/api/student/timetable'] : ['/api/classes'],
+    enabled: !!user,
+  });
 
-  const canManageTimetable = user && ['admin', 'principal'].includes(user.role);
+  const timetable = timetableData?.timetable || [];
 
-  const timetableData: Record<string, Array<{ id: string; period: string; subject: string; teacher: string; room: string }>> = {
-    'Monday': [
-      { id: '1', period: '08:00 - 09:00', subject: 'Mathematics', teacher: 'Ms. Anderson', room: '201' },
-      { id: '2', period: '09:00 - 10:00', subject: 'Physics', teacher: 'Dr. Williams', room: '301' },
-      { id: '3', period: '10:00 - 11:00', subject: 'English', teacher: 'Mr. Johnson', room: '101' },
-      { id: '4', period: '11:15 - 12:15', subject: 'Computer Science', teacher: 'Mrs. Brown', room: '401' },
-      { id: '5', period: '12:15 - 13:15', subject: 'Chemistry', teacher: 'Dr. Williams', room: '302' },
-    ],
-    'Tuesday': [
-      { id: '6', period: '08:00 - 09:00', subject: 'English', teacher: 'Mr. Johnson', room: '101' },
-      { id: '7', period: '09:00 - 10:00', subject: 'Mathematics', teacher: 'Ms. Anderson', room: '201' },
-      { id: '8', period: '10:00 - 11:00', subject: 'Physical Education', teacher: 'Mr. Davis', room: 'Ground' },
-      { id: '9', period: '11:15 - 12:15', subject: 'History', teacher: 'Mrs. Martinez', room: '102' },
-      { id: '10', period: '12:15 - 13:15', subject: 'Biology', teacher: 'Dr. Williams', room: '303' },
-    ],
-    'Wednesday': [
-      { id: '11', period: '08:00 - 09:00', subject: 'Computer Science', teacher: 'Mrs. Brown', room: '401' },
-      { id: '12', period: '09:00 - 10:00', subject: 'Chemistry', teacher: 'Dr. Williams', room: '302' },
-      { id: '13', period: '10:00 - 11:00', subject: 'Mathematics', teacher: 'Ms. Anderson', room: '201' },
-      { id: '14', period: '11:15 - 12:15', subject: 'English', teacher: 'Mr. Johnson', room: '101' },
-      { id: '15', period: '12:15 - 13:15', subject: 'Geography', teacher: 'Mrs. Martinez', room: '103' },
-    ],
-    'Thursday': [
-      { id: '16', period: '08:00 - 09:00', subject: 'Physics', teacher: 'Dr. Williams', room: '301' },
-      { id: '17', period: '09:00 - 10:00', subject: 'English', teacher: 'Mr. Johnson', room: '101' },
-      { id: '18', period: '10:00 - 11:00', subject: 'Computer Science', teacher: 'Mrs. Brown', room: '401' },
-      { id: '19', period: '11:15 - 12:15', subject: 'Mathematics', teacher: 'Ms. Anderson', room: '201' },
-      { id: '20', period: '12:15 - 13:15', subject: 'Art', teacher: 'Ms. Garcia', room: 'Art Room' },
-    ],
-    'Friday': [
-      { id: '21', period: '08:00 - 09:00', subject: 'Biology', teacher: 'Dr. Williams', room: '303' },
-      { id: '22', period: '09:00 - 10:00', subject: 'Mathematics', teacher: 'Ms. Anderson', room: '201' },
-      { id: '23', period: '10:00 - 11:00', subject: 'English', teacher: 'Mr. Johnson', room: '101' },
-      { id: '24', period: '11:15 - 12:15', subject: 'Music', teacher: 'Mr. Thompson', room: 'Music Room' },
-      { id: '25', period: '12:15 - 13:15', subject: 'Computer Science', teacher: 'Mrs. Brown', room: '401' },
-    ],
+  const getTimetableForDayAndPeriod = (dayIndex: number, periodIndex: number) => {
+    return timetable.find(
+      (item: any) => item.day === dayIndex && item.period === periodIndex
+    );
   };
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-  const handleAddPeriod = () => {
-    toast({
-      title: 'Period Added',
-      description: 'New period has been added to the timetable.',
-    });
-    setIsAddDialogOpen(false);
+  const isBreakPeriod = (periodLabel: string) => {
+    return periodLabel === 'Break' || periodLabel === 'Lunch';
   };
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 max-w-7xl">
+      <div className="p-6 space-y-6">
         <Breadcrumb items={[{ label: 'Timetable' }]} />
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold">Timetable Management</h1>
-            <p className="text-muted-foreground mt-1">View and manage class timetables</p>
-          </div>
-          {canManageTimetable && (
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-period">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Period
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Period</DialogTitle>
-                  <DialogDescription>Add a new period to the timetable</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="day">Day</Label>
-                    <Select>
-                      <SelectTrigger data-testid="select-day">
-                        <SelectValue placeholder="Select day" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {daysOfWeek.map(day => (
-                          <SelectItem key={day} value={day.toLowerCase()}>{day}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startTime">Start Time</Label>
-                      <Input id="startTime" type="time" data-testid="input-start-time" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="endTime">End Time</Label>
-                      <Input id="endTime" type="time" data-testid="input-end-time" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select>
-                      <SelectTrigger data-testid="select-subject">
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mathematics">Mathematics</SelectItem>
-                        <SelectItem value="physics">Physics</SelectItem>
-                        <SelectItem value="chemistry">Chemistry</SelectItem>
-                        <SelectItem value="english">English</SelectItem>
-                        <SelectItem value="computer-science">Computer Science</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="teacher">Teacher</Label>
-                    <Select>
-                      <SelectTrigger data-testid="select-teacher">
-                        <SelectValue placeholder="Select teacher" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="anderson">Ms. Anderson</SelectItem>
-                        <SelectItem value="williams">Dr. Williams</SelectItem>
-                        <SelectItem value="johnson">Mr. Johnson</SelectItem>
-                        <SelectItem value="brown">Mrs. Brown</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="room">Room</Label>
-                    <Input id="room" placeholder="201" data-testid="input-room" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddPeriod} data-testid="button-save-period">
-                    Add Period
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+        <div>
+          <h1 className="text-3xl font-semibold">Class Timetable</h1>
+          <p className="text-muted-foreground mt-1">Weekly schedule at a glance</p>
         </div>
 
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Class Timetable</CardTitle>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger className="w-48" data-testid="select-class">
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10-A">Grade 10-A</SelectItem>
-                  <SelectItem value="10-B">Grade 10-B</SelectItem>
-                  <SelectItem value="9-A">Grade 9-A</SelectItem>
-                  <SelectItem value="9-B">Grade 9-B</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <CardTitle>Weekly Schedule</CardTitle>
+                <CardDescription>All classes and periods for the week</CardDescription>
+              </div>
+              <Clock className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {daysOfWeek.map(day => (
-                <div key={day} className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-lg mb-4">{day}</h3>
-                  <div className="space-y-3">
-                    {timetableData[day].map((period) => (
-                      <div key={period.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                        <div className="flex items-center gap-4 flex-1">
-                          <Badge variant="outline" className="min-w-32">{period.period}</Badge>
-                          <div className="flex-1">
-                            <p className="font-medium">{period.subject}</p>
-                            <p className="text-sm text-muted-foreground">{period.teacher} • Room {period.room}</p>
-                          </div>
-                        </div>
-                        {canManageTimetable && (
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" data-testid={`button-edit-period-${period.id}`}>
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" data-testid={`button-delete-period-${period.id}`}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        )}
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[1200px]">
+                  <div className="grid grid-cols-7 gap-2 mb-2">
+                    <div className="font-semibold text-sm text-center p-2">Period / Day</div>
+                    {DAYS.map((day) => (
+                      <div
+                        key={day}
+                        className="font-semibold text-sm text-center p-2 bg-primary/5 rounded"
+                        data-testid={`header-${day.toLowerCase()}`}
+                      >
+                        {day}
                       </div>
                     ))}
                   </div>
+
+                  {PERIODS.map((period, periodIndex) => (
+                    <div
+                      key={period.label}
+                      className="grid grid-cols-7 gap-2 mb-2"
+                      data-testid={`row-${period.label.toLowerCase().replace(' ', '-')}`}
+                    >
+                      <div
+                        className={`text-sm p-3 rounded border ${
+                          isBreakPeriod(period.label)
+                            ? 'bg-muted/50'
+                            : 'bg-background'
+                        }`}
+                      >
+                        <div className="font-medium">{period.label}</div>
+                        <div className="text-xs text-muted-foreground">{period.time}</div>
+                      </div>
+
+                      {DAYS.map((_, dayIndex) => {
+                        if (isBreakPeriod(period.label)) {
+                          return (
+                            <div
+                              key={dayIndex}
+                              className="text-sm p-3 rounded border bg-muted/30 flex items-center justify-center"
+                              data-testid={`cell-day${dayIndex}-period${periodIndex}`}
+                            >
+                              <span className="text-muted-foreground text-xs">
+                                {period.label}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        const classItem = getTimetableForDayAndPeriod(dayIndex, periodIndex);
+
+                        return (
+                          <div
+                            key={dayIndex}
+                            className={`text-sm p-3 rounded border ${
+                              classItem
+                                ? 'bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 cursor-pointer transition-colors'
+                                : 'bg-background hover:bg-muted/50'
+                            }`}
+                            data-testid={`cell-day${dayIndex}-period${periodIndex}`}
+                          >
+                            {classItem ? (
+                              <div className="space-y-1">
+                                <div className="font-medium text-primary">
+                                  {classItem.subjectId?.name || 'Subject'}
+                                </div>
+                                {classItem.subjectId?.code && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {classItem.subjectId.code}
+                                  </Badge>
+                                )}
+                                <div className="text-xs text-muted-foreground">
+                                  {classItem.teacherId
+                                    ? `${classItem.teacherId.firstName} ${classItem.teacherId.lastName}`
+                                    : 'Teacher TBA'}
+                                </div>
+                                {classItem.room && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Room {classItem.room}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground text-center">
+                                Free
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Legend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-950/20 border"></div>
+                <span className="text-sm">Scheduled Class</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-muted/30 border"></div>
+                <span className="text-sm">Break / Lunch</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-background border"></div>
+                <span className="text-sm">Free Period</span>
+              </div>
             </div>
           </CardContent>
         </Card>
