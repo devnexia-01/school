@@ -8,6 +8,7 @@ import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { startTransition } from 'react';
 
 export function StudentDashboard() {
   const { user } = useAuth();
@@ -118,7 +119,7 @@ export function StudentDashboard() {
                 size="sm"
                 className="w-full"
                 data-testid="button-view-profile"
-                onClick={() => setLocation('/profile-settings')}
+                onClick={() => startTransition(() => setLocation('/profile'))}
               >
                 View Full Profile
               </Button>
@@ -274,11 +275,6 @@ export function StudentDashboard() {
             ) : (
               <p className="text-center text-muted-foreground py-8">No classes scheduled for today</p>
             )}
-            <Link href="/timetable">
-              <Button variant="outline" className="w-full mt-4" data-testid="button-view-full-timetable">
-                View Full Timetable
-              </Button>
-            </Link>
           </CardContent>
         </Card>
 
