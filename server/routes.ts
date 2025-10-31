@@ -937,6 +937,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Transport Management Routes ============
+  app.get('/api/transport/routes', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const routes = await storage.getAllTransportRoutes(tenantId);
+      res.json({ routes });
+    } catch (error) {
+      console.error('Get transport routes error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/transport/routes', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const routeData = { ...req.body, tenantId };
+      const route = await storage.createTransportRoute(routeData);
+      res.status(201).json(route);
+    } catch (error) {
+      console.error('Create transport route error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/student/profile', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;

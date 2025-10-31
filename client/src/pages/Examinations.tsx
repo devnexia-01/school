@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,12 +8,29 @@ import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
-import { FileText, Download, Calendar, TrendingUp } from 'lucide-react';
+import { FileText, Download, Calendar, TrendingUp, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Examinations() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isStudent = user?.role === 'student';
+  const canManageExams = user && ['admin', 'principal', 'super_admin'].includes(user.role);
+  const [isAddExamDialogOpen, setIsAddExamDialogOpen] = useState(false);
+  const [examForm, setExamForm] = useState({
+    name: '',
+    type: '',
+    startDate: '',
+    endDate: '',
+    totalMarks: '100',
+    description: '',
+  });
 
   const { data: examsData, isLoading: examsLoading } = useQuery({
     queryKey: ['/api/exams'],
@@ -25,6 +43,53 @@ export default function Examinations() {
 
   const exams = examsData?.exams || [];
   const results = resultsData?.results || [];
+
+  const createExamMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/exams', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...examForm,
+          totalMarks: parseInt(examForm.totalMarks),
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Exam created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/exams'] });
+      setIsAddExamDialogOpen(false);
+      setExamForm({
+        name: '',
+        type: '',
+        startDate: '',
+        endDate: '',
+        totalMarks: '100',
+        description: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create exam',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateExam = () => {
+    if (!examForm.name || !examForm.type || !examForm.startDate || !examForm.endDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    createExamMutation.mutate();
+  };
 
   const now = new Date();
   const upcomingExams = exams.filter((exam: any) => new Date(exam.startDate) > now);
@@ -55,11 +120,107 @@ export default function Examinations() {
       <div className="p-6 space-y-6">
         <Breadcrumb items={[{ label: 'Examinations' }]} />
 
-        <div>
-          <h1 className="text-3xl font-semibold">Examinations</h1>
-          <p className="text-muted-foreground mt-1">
-            {isStudent ? 'View your exam schedule and results' : 'Manage exams and results'}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold">Examinations</h1>
+            <p className="text-muted-foreground mt-1">
+              {isStudent ? 'View your exam schedule and results' : 'Manage exams and results'}
+            </p>
+          </div>
+          {canManageExams && (
+            <Dialog open={isAddExamDialogOpen} onOpenChange={setIsAddExamDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-exam">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Exam
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Exam</DialogTitle>
+                  <DialogDescription>Create a new examination schedule</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="exam-name">Exam Name *</Label>
+                    <Input
+                      id="exam-name"
+                      placeholder="e.g., Mid-Term Exam"
+                      value={examForm.name}
+                      onChange={(e) => setExamForm({ ...examForm, name: e.target.value })}
+                      data-testid="input-exam-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="exam-type">Exam Type *</Label>
+                    <Select value={examForm.type} onValueChange={(value) => setExamForm({ ...examForm, type: value })}>
+                      <SelectTrigger data-testid="select-exam-type">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="midterm">Mid-Term</SelectItem>
+                        <SelectItem value="final">Final</SelectItem>
+                        <SelectItem value="unit_test">Unit Test</SelectItem>
+                        <SelectItem value="practical">Practical</SelectItem>
+                        <SelectItem value="assignment">Assignment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="start-date">Start Date *</Label>
+                      <Input
+                        id="start-date"
+                        type="date"
+                        value={examForm.startDate}
+                        onChange={(e) => setExamForm({ ...examForm, startDate: e.target.value })}
+                        data-testid="input-start-date"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end-date">End Date *</Label>
+                      <Input
+                        id="end-date"
+                        type="date"
+                        value={examForm.endDate}
+                        onChange={(e) => setExamForm({ ...examForm, endDate: e.target.value })}
+                        data-testid="input-end-date"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="total-marks">Total Marks</Label>
+                    <Input
+                      id="total-marks"
+                      type="number"
+                      placeholder="100"
+                      value={examForm.totalMarks}
+                      onChange={(e) => setExamForm({ ...examForm, totalMarks: e.target.value })}
+                      data-testid="input-total-marks"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Input
+                      id="description"
+                      placeholder="Optional description"
+                      value={examForm.description}
+                      onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
+                      data-testid="input-description"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddExamDialogOpen(false)} data-testid="button-cancel-exam">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateExam} disabled={createExamMutation.isPending} data-testid="button-create-exam">
+                    {createExamMutation.isPending ? 'Creating...' : 'Create Exam'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <Tabs defaultValue="upcoming" className="space-y-6">

@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,13 @@ import { TrendingUp, AlertCircle, CreditCard } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface FeePayment {
   id: string;
@@ -34,7 +42,17 @@ interface FeeStructure {
 
 export default function Fees() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isStudent = user?.role === 'student';
+  const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
+  const [feeForm, setFeeForm] = useState({
+    name: '',
+    amount: '',
+    classId: '',
+    academicYear: new Date().getFullYear().toString(),
+    dueDate: '',
+    description: '',
+  });
 
   const { data: profileData } = useQuery({
     queryKey: ['/api/student/profile'],
@@ -52,8 +70,61 @@ export default function Fees() {
     queryKey: ['/api/fee-structures'],
   });
 
+  const { data: classesData } = useQuery<{ classes: any[] }>({
+    queryKey: ['/api/classes'],
+    enabled: !isStudent,
+  });
+
   const feePayments = paymentsData?.payments || [];
   const feeStructures = structuresData?.feeStructures || [];
+  const classes = classesData?.classes || [];
+
+  const createFeeStructureMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/fee-structures', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...feeForm,
+          amount: parseFloat(feeForm.amount),
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Fee structure created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/fee-structures'] });
+      setIsAddFeeDialogOpen(false);
+      setFeeForm({
+        name: '',
+        amount: '',
+        classId: '',
+        academicYear: new Date().getFullYear().toString(),
+        dueDate: '',
+        description: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create fee structure',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateFeeStructure = () => {
+    if (!feeForm.name || !feeForm.amount || !feeForm.classId) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    createFeeStructureMutation.mutate();
+  };
 
   const totalCollected = feePayments
     .filter(p => p.status === 'paid')
@@ -258,10 +329,99 @@ export default function Fees() {
                     <CardDescription>{isStudent ? 'Fee structures applicable to you' : 'Manage fee types and amounts'}</CardDescription>
                   </div>
                   {!isStudent && (
-                    <Button data-testid="button-add-fee-structure">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Fee Structure
-                    </Button>
+                    <Dialog open={isAddFeeDialogOpen} onOpenChange={setIsAddFeeDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-fee-structure">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Fee Structure
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Add Fee Structure</DialogTitle>
+                          <DialogDescription>Create a new fee structure for a class</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="fee-name">Fee Name *</Label>
+                            <Input
+                              id="fee-name"
+                              placeholder="e.g., Tuition Fee, Lab Fee"
+                              value={feeForm.name}
+                              onChange={(e) => setFeeForm({ ...feeForm, name: e.target.value })}
+                              data-testid="input-fee-name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="class">Class *</Label>
+                            <Select value={feeForm.classId} onValueChange={(value) => setFeeForm({ ...feeForm, classId: value })}>
+                              <SelectTrigger data-testid="select-class">
+                                <SelectValue placeholder="Select class" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {classes.map((cls) => (
+                                  <SelectItem key={cls._id} value={cls._id}>
+                                    Class {cls.grade} {cls.section}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="amount">Amount *</Label>
+                              <Input
+                                id="amount"
+                                type="number"
+                                placeholder="0"
+                                value={feeForm.amount}
+                                onChange={(e) => setFeeForm({ ...feeForm, amount: e.target.value })}
+                                data-testid="input-amount"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="academic-year">Academic Year</Label>
+                              <Input
+                                id="academic-year"
+                                placeholder="2025"
+                                value={feeForm.academicYear}
+                                onChange={(e) => setFeeForm({ ...feeForm, academicYear: e.target.value })}
+                                data-testid="input-academic-year"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="due-date">Due Date</Label>
+                            <Input
+                              id="due-date"
+                              type="date"
+                              value={feeForm.dueDate}
+                              onChange={(e) => setFeeForm({ ...feeForm, dueDate: e.target.value })}
+                              data-testid="input-due-date"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="fee-description">Description</Label>
+                            <Textarea
+                              id="fee-description"
+                              placeholder="Optional description"
+                              rows={2}
+                              value={feeForm.description}
+                              onChange={(e) => setFeeForm({ ...feeForm, description: e.target.value })}
+                              data-testid="textarea-description"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsAddFeeDialogOpen(false)} data-testid="button-cancel-fee">
+                            Cancel
+                          </Button>
+                          <Button onClick={handleCreateFeeStructure} disabled={createFeeStructureMutation.isPending} data-testid="button-create-fee">
+                            {createFeeStructureMutation.isPending ? 'Creating...' : 'Create Fee Structure'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               </CardHeader>

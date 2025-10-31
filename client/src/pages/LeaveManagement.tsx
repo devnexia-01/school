@@ -80,11 +80,10 @@ export default function LeaveManagement() {
 
   const applyLeaveMutation = useMutation({
     mutationFn: async (data: LeaveFormData) => {
-      const response = await apiRequest('/api/leave-requests', {
+      return await apiRequest('/api/leave-requests', {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -106,11 +105,10 @@ export default function LeaveManagement() {
 
   const updateLeaveStatusMutation = useMutation({
     mutationFn: async ({ id, status, reviewNotes }: { id: string; status: string; reviewNotes?: string }) => {
-      const response = await apiRequest(`/api/leave-requests/${id}`, {
+      return await apiRequest(`/api/leave-requests/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status, reviewNotes }),
       });
-      return response.json();
     },
     onSuccess: (_, variables) => {
       toast({
@@ -150,7 +148,7 @@ export default function LeaveManagement() {
   };
 
   const pendingRequests = leaveRequests.filter(l => l.status === 'pending');
-  const myRequests = canApplyLeave ? leaveRequests.filter(l => l.userId._id === user?.id) : [];
+  const myRequests = canApplyLeave ? leaveRequests : [];
 
   if (isLoading) {
     return (

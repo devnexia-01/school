@@ -132,11 +132,12 @@ export default function Attendance() {
   });
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-    setAttendanceData(prev =>
-      prev.map(student =>
+    setAttendanceData(prev => {
+      const updated = prev.map(student =>
         student.id === studentId ? { ...student, status } : student
-      )
-    );
+      );
+      return [...updated];
+    });
   };
 
   const handleBulkUpdate = (status: AttendanceStatus) => {

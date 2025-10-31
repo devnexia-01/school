@@ -1,17 +1,38 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bus, MapPin, Clock, Phone, User, IndianRupee } from 'lucide-react';
+import { Bus, MapPin, Clock, Phone, User, IndianRupee, Plus } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Transport() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isStudent = user?.role === 'student';
   const canViewTransport = user && ['admin', 'principal', 'student'].includes(user.role);
+  const canManageTransport = user && ['admin', 'principal'].includes(user.role);
+  const [isAddRouteDialogOpen, setIsAddRouteDialogOpen] = useState(false);
+  const [routeForm, setRouteForm] = useState({
+    routeName: '',
+    routeNumber: '',
+    vehicleNumber: '',
+    driverName: '',
+    driverPhone: '',
+    capacity: '',
+    stops: '',
+    fare: '',
+  });
 
   const { data: transportData, isLoading } = useQuery<{ transport?: any; routes?: any[] }>({
     queryKey: isStudent ? ['/api/student/transport'] : ['/api/transport/routes'],
@@ -21,6 +42,57 @@ export default function Transport() {
   const transport = transportData?.transport;
   const routes = transportData?.routes || [];
   const route = transport?.routeId;
+
+  const createRouteMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/transport/routes', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...routeForm,
+          capacity: parseInt(routeForm.capacity) || 0,
+          fare: parseFloat(routeForm.fare) || 0,
+          active: true,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Transport route created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/transport/routes'] });
+      setIsAddRouteDialogOpen(false);
+      setRouteForm({
+        routeName: '',
+        routeNumber: '',
+        vehicleNumber: '',
+        driverName: '',
+        driverPhone: '',
+        capacity: '',
+        stops: '',
+        fare: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create transport route',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateRoute = () => {
+    if (!routeForm.routeName || !routeForm.routeNumber) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in route name and number',
+        variant: 'destructive',
+      });
+      return;
+    }
+    createRouteMutation.mutate();
+  };
 
   if (isLoading) {
     return (
@@ -40,11 +112,128 @@ export default function Transport() {
         <div className="p-6 space-y-6 max-w-7xl">
           <Breadcrumb items={[{ label: 'Transport Management' }]} />
 
-          <div>
-            <h1 className="text-3xl font-semibold">Transport Routes</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage all school transport routes and vehicles
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold">Transport Routes</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage all school transport routes and vehicles
+              </p>
+            </div>
+            {canManageTransport && (
+              <Dialog open={isAddRouteDialogOpen} onOpenChange={setIsAddRouteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-route">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Route
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Transport Route</DialogTitle>
+                    <DialogDescription>Create a new transport route</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="route-name">Route Name *</Label>
+                        <Input
+                          id="route-name"
+                          placeholder="Route A"
+                          value={routeForm.routeName}
+                          onChange={(e) => setRouteForm({ ...routeForm, routeName: e.target.value })}
+                          data-testid="input-route-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="route-number">Route Number *</Label>
+                        <Input
+                          id="route-number"
+                          placeholder="R001"
+                          value={routeForm.routeNumber}
+                          onChange={(e) => setRouteForm({ ...routeForm, routeNumber: e.target.value })}
+                          data-testid="input-route-number"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicle-number">Vehicle Number</Label>
+                        <Input
+                          id="vehicle-number"
+                          placeholder="DL-1AB-1234"
+                          value={routeForm.vehicleNumber}
+                          onChange={(e) => setRouteForm({ ...routeForm, vehicleNumber: e.target.value })}
+                          data-testid="input-vehicle-number"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="capacity">Capacity</Label>
+                        <Input
+                          id="capacity"
+                          type="number"
+                          placeholder="50"
+                          value={routeForm.capacity}
+                          onChange={(e) => setRouteForm({ ...routeForm, capacity: e.target.value })}
+                          data-testid="input-capacity"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="driver-name">Driver Name</Label>
+                        <Input
+                          id="driver-name"
+                          placeholder="John Doe"
+                          value={routeForm.driverName}
+                          onChange={(e) => setRouteForm({ ...routeForm, driverName: e.target.value })}
+                          data-testid="input-driver-name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="driver-phone">Driver Phone</Label>
+                        <Input
+                          id="driver-phone"
+                          placeholder="+91 98765 43210"
+                          value={routeForm.driverPhone}
+                          onChange={(e) => setRouteForm({ ...routeForm, driverPhone: e.target.value })}
+                          data-testid="input-driver-phone"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="stops">Stops (comma-separated)</Label>
+                      <Textarea
+                        id="stops"
+                        placeholder="Stop 1, Stop 2, Stop 3"
+                        rows={2}
+                        value={routeForm.stops}
+                        onChange={(e) => setRouteForm({ ...routeForm, stops: e.target.value })}
+                        data-testid="textarea-stops"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fare">Monthly Fare</Label>
+                      <Input
+                        id="fare"
+                        type="number"
+                        placeholder="1000"
+                        value={routeForm.fare}
+                        onChange={(e) => setRouteForm({ ...routeForm, fare: e.target.value })}
+                        data-testid="input-fare"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddRouteDialogOpen(false)} data-testid="button-cancel-route">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateRoute} disabled={createRouteMutation.isPending} data-testid="button-create-route">
+                      {createRouteMutation.isPending ? 'Creating...' : 'Create Route'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <Card>

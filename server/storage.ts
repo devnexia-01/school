@@ -153,6 +153,10 @@ export interface IStorage {
   getStudentTransportDetails(studentId: string, tenantId: string): Promise<any>;
   getStudentByUserId(userId: string, tenantId: string): Promise<Student | undefined>;
   
+  // Transport Management
+  getAllTransportRoutes(tenantId: string): Promise<any[]>;
+  createTransportRoute(route: any): Promise<any>;
+  
   // Timetable Management
   getTimetableByClass(classId: string, tenantId: string): Promise<any[]>;
   
@@ -1158,6 +1162,19 @@ export class DatabaseStorage implements IStorage {
     }
     
     return toPlainObject(transport);
+  }
+  
+  async getAllTransportRoutes(tenantId: string): Promise<any[]> {
+    const routes = await TransportRouteModel.find({ tenantId })
+    .sort({ routeNumber: 1 })
+    .lean();
+    
+    return routes.map(toPlainObject);
+  }
+  
+  async createTransportRoute(route: any): Promise<any> {
+    const newRoute = await TransportRouteModel.create(route);
+    return toPlainObject(newRoute.toObject());
   }
   
   // Payroll Management

@@ -48,7 +48,7 @@ export default function Payroll() {
       const results = [];
       for (const facultyMember of faculty) {
         const payrollData = {
-          userId: facultyMember._id,
+          userId: facultyMember.id || facultyMember._id,
           month: data.month,
           year: data.year,
           basicSalary: 50000,
@@ -64,7 +64,7 @@ export default function Payroll() {
         results.push({
           ...result,
           employeeName: `${facultyMember.firstName} ${facultyMember.lastName}`,
-          employeeId: facultyMember._id,
+          employeeId: facultyMember.id || facultyMember._id,
           role: facultyMember.role,
         });
       }
