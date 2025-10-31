@@ -6,7 +6,18 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
 
 ## Recent Changes
 
-### Timetable and Attendance System Enhancements (October 31, 2025)
+### Bug Fixes and Feature Enhancements (October 31, 2025 - Session 2)
+- **Attendance Status Fix**: Fixed attendance marking buttons stuck on 'present' - modified handleStatusChange to immutably update state when clicking absent/late/half-day status buttons
+- **Add Exam Feature**: Implemented complete exam creation UI for admin/principal roles with dialog form, validation, React Query mutation, cache invalidation, and data-testid attributes for testing
+- **Add Fee Structure Feature**: Made "Add Fee Structure" button functional with complete dialog, form with class selection dropdown, backend integration, and proper mutation handling
+- **Payroll Generation Fix**: Fixed 500 error during payroll generation by correcting faculty object property access (changed `faculty._id` to `faculty.id || faculty._id` to handle both MongoDB and API formats)
+- **Transport Route Management**: Added complete transport management system:
+  - Backend: `getAllTransportRoutes` and `createTransportRoute` storage methods
+  - API Routes: `GET /api/transport/routes` and `POST /api/transport/routes` with authentication and authorization
+  - Frontend: Dialog with comprehensive form for creating routes (route name/number, vehicle, driver, capacity, stops, fare) with all data-testid attributes
+- **Faculty Leave Requests Fix**: Resolved issue where faculty users couldn't see their own leave requests - removed redundant frontend filtering since backend already filters by user role, and fixed mutation bug by removing incorrect `.json()` calls on apiRequest results
+
+### Timetable and Attendance System Enhancements (October 31, 2025 - Session 1)
 - **Timetable UI Redesign**: Completely redesigned timetable page with modern day-wise layout showing colored time slot blocks organized by day with time ranges, durations, subject names, teacher names, and room locations
 - **Bulk Attendance API**: Implemented secure bulk attendance endpoint (`POST /api/attendance/bulk`) with comprehensive tenant isolation validation through storage layer
 - **Security Enhancement**: Added `bulkCreateAttendance` method to storage layer that validates every student and class belongs to the tenant before any database operations, preventing cross-tenant data access
