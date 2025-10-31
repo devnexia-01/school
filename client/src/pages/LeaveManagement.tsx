@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { DataTable } from '@/components/shared/DataTable';
@@ -8,12 +9,49 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
 import { Plus, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+
+const leaveFormSchema = z.object({
+  leaveType: z.string().min(1, 'Please select a leave type'),
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().min(1, 'End date is required'),
+  reason: z.string().min(10, 'Reason must be at least 10 characters'),
+});
+
+type LeaveFormData = z.infer<typeof leaveFormSchema>;
+
+type LeaveRequest = {
+  _id: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  reviewedAt?: string;
+  reviewNotes?: string;
+  createdAt: string;
+};
 
 export default function LeaveManagement() {
   const { user } = useAuth();
@@ -23,87 +61,109 @@ export default function LeaveManagement() {
   const canApproveLeave = user && ['admin', 'principal'].includes(user.role);
   const canApplyLeave = user && ['faculty'].includes(user.role);
 
-  const leaveRequests = [
-    {
-      id: '1',
-      employeeName: 'Ms. Anderson',
-      employeeId: 'EMP001',
-      leaveType: 'Sick Leave',
-      startDate: '2025-02-05',
-      endDate: '2025-02-07',
-      days: 3,
-      reason: 'Medical treatment required',
-      status: 'pending',
-      appliedDate: '2025-01-25',
+  const form = useForm<LeaveFormData>({
+    resolver: zodResolver(leaveFormSchema),
+    defaultValues: {
+      leaveType: '',
+      startDate: '',
+      endDate: '',
+      reason: '',
     },
-    {
-      id: '2',
-      employeeName: 'Dr. Williams',
-      employeeId: 'EMP002',
-      leaveType: 'Casual Leave',
-      startDate: '2025-02-10',
-      endDate: '2025-02-12',
-      days: 3,
-      reason: 'Personal work',
-      status: 'approved',
-      appliedDate: '2025-01-20',
-      reviewedBy: 'Admin',
-      reviewedDate: '2025-01-21',
-    },
-    {
-      id: '3',
-      employeeName: 'Mr. Johnson',
-      employeeId: 'EMP003',
-      leaveType: 'Earned Leave',
-      startDate: '2025-03-01',
-      endDate: '2025-03-05',
-      days: 5,
-      reason: 'Family vacation',
-      status: 'pending',
-      appliedDate: '2025-01-26',
-    },
-    {
-      id: '4',
-      employeeName: 'Mrs. Brown',
-      employeeId: 'EMP004',
-      leaveType: 'Sick Leave',
-      startDate: '2025-01-20',
-      endDate: '2025-01-21',
-      days: 2,
-      reason: 'Fever',
-      status: 'rejected',
-      appliedDate: '2025-01-18',
-      reviewedBy: 'Principal',
-      reviewedDate: '2025-01-19',
-      reviewNotes: 'Insufficient notice provided',
-    },
-  ];
+  });
 
-  const handleApplyLeave = () => {
-    toast({
-      title: 'Leave Applied',
-      description: 'Your leave request has been submitted successfully.',
-    });
-    setIsApplyDialogOpen(false);
+  const { data: leaveRequestsData, isLoading } = useQuery<{ leaveRequests: LeaveRequest[] }>({
+    queryKey: ['/api/leave-requests'],
+    enabled: !!user,
+  });
+
+  const leaveRequests = leaveRequestsData?.leaveRequests || [];
+
+  const applyLeaveMutation = useMutation({
+    mutationFn: async (data: LeaveFormData) => {
+      const response = await apiRequest('/api/leave-requests', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Leave Applied',
+        description: 'Your leave request has been submitted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/leave-requests'] });
+      setIsApplyDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit leave request.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateLeaveStatusMutation = useMutation({
+    mutationFn: async ({ id, status, reviewNotes }: { id: string; status: string; reviewNotes?: string }) => {
+      const response = await apiRequest(`/api/leave-requests/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, reviewNotes }),
+      });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: variables.status === 'approved' ? 'Leave Approved' : 'Leave Rejected',
+        description: `Leave request has been ${variables.status}.`,
+        variant: variables.status === 'approved' ? 'default' : 'destructive',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/leave-requests'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update leave status.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleApplyLeave = (data: LeaveFormData) => {
+    applyLeaveMutation.mutate(data);
   };
 
-  const handleApproveLeave = (leave: any) => {
-    toast({
-      title: 'Leave Approved',
-      description: `Leave request from ${leave.employeeName} has been approved.`,
-    });
+  const handleApproveLeave = (leave: LeaveRequest) => {
+    updateLeaveStatusMutation.mutate({ id: leave._id, status: 'approved' });
   };
 
-  const handleRejectLeave = (leave: any) => {
-    toast({
-      title: 'Leave Rejected',
-      description: `Leave request from ${leave.employeeName} has been rejected.`,
-      variant: 'destructive',
-    });
+  const handleRejectLeave = (leave: LeaveRequest) => {
+    updateLeaveStatusMutation.mutate({ id: leave._id, status: 'rejected' });
+  };
+
+  const calculateDays = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
   };
 
   const pendingRequests = leaveRequests.filter(l => l.status === 'pending');
-  const myRequests = user?.role === 'faculty' ? leaveRequests.filter(l => l.employeeId === 'EMP001') : [];
+  const myRequests = canApplyLeave ? leaveRequests.filter(l => l.userId._id === user?.id) : [];
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 max-w-7xl">
+          <Breadcrumb items={[{ label: 'Leave Management' }]} />
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -128,50 +188,97 @@ export default function LeaveManagement() {
                   <DialogTitle>Apply for Leave</DialogTitle>
                   <DialogDescription>Submit a new leave request</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="leaveType">Leave Type</Label>
-                    <Select>
-                      <SelectTrigger data-testid="select-leave-type">
-                        <SelectValue placeholder="Select leave type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sick">Sick Leave</SelectItem>
-                        <SelectItem value="casual">Casual Leave</SelectItem>
-                        <SelectItem value="earned">Earned Leave</SelectItem>
-                        <SelectItem value="maternity">Maternity Leave</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="startDate">Start Date</Label>
-                      <Input id="startDate" type="date" data-testid="input-start-date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="endDate">End Date</Label>
-                      <Input id="endDate" type="date" data-testid="input-end-date" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reason">Reason</Label>
-                    <Textarea
-                      id="reason"
-                      placeholder="Enter reason for leave"
-                      rows={3}
-                      data-testid="textarea-reason"
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleApplyLeave)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="leaveType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Leave Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-leave-type">
+                                <SelectValue placeholder="Select leave type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="sick">Sick Leave</SelectItem>
+                              <SelectItem value="casual">Casual Leave</SelectItem>
+                              <SelectItem value="earned">Earned Leave</SelectItem>
+                              <SelectItem value="maternity">Maternity Leave</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsApplyDialogOpen(false)} data-testid="button-cancel">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleApplyLeave} data-testid="button-submit-leave">
-                    Submit Request
-                  </Button>
-                </DialogFooter>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="startDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" data-testid="input-start-date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="endDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>End Date</FormLabel>
+                            <FormControl>
+                              <Input type="date" data-testid="input-end-date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="reason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reason</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Enter reason for leave"
+                              rows={3}
+                              data-testid="textarea-reason"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsApplyDialogOpen(false)} 
+                        data-testid="button-cancel"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        data-testid="button-submit-leave"
+                        disabled={applyLeaveMutation.isPending}
+                      >
+                        {applyLeaveMutation.isPending ? 'Submitting...' : 'Submit Request'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           )}
@@ -209,22 +316,24 @@ export default function LeaveManagement() {
                           header: 'Employee',
                           cell: (item) => (
                             <div>
-                              <p className="font-medium">{item.employeeName}</p>
-                              <p className="text-sm text-muted-foreground">{item.employeeId}</p>
+                              <p className="font-medium">{item.userId.firstName} {item.userId.lastName}</p>
+                              <p className="text-sm text-muted-foreground">{item.userId.email}</p>
                             </div>
                           ),
                         },
                         {
                           key: 'leaveType',
                           header: 'Leave Type',
-                          cell: (item) => item.leaveType,
+                          cell: (item) => (
+                            <span className="capitalize">{item.leaveType.replace('_', ' ')}</span>
+                          ),
                         },
                         {
                           key: 'duration',
                           header: 'Duration',
                           cell: (item) => (
                             <div>
-                              <p className="font-medium">{item.days} days</p>
+                              <p className="font-medium">{calculateDays(item.startDate, item.endDate)} days</p>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
                               </p>
@@ -261,7 +370,8 @@ export default function LeaveManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleApproveLeave(item)}
-                                data-testid={`button-approve-${item.id}`}
+                                data-testid={`button-approve-${item._id}`}
+                                disabled={updateLeaveStatusMutation.isPending}
                               >
                                 <Check className="h-4 w-4 mr-1 text-green-600" />
                                 Approve
@@ -270,7 +380,8 @@ export default function LeaveManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRejectLeave(item)}
-                                data-testid={`button-reject-${item.id}`}
+                                data-testid={`button-reject-${item._id}`}
+                                disabled={updateLeaveStatusMutation.isPending}
                               >
                                 <X className="h-4 w-4 mr-1 text-red-600" />
                                 Reject
@@ -278,7 +389,7 @@ export default function LeaveManagement() {
                             </div>
                           ) : item.reviewedBy ? (
                             <div className="text-sm text-muted-foreground">
-                              Reviewed by {item.reviewedBy}
+                              Reviewed by {item.reviewedBy.firstName} {item.reviewedBy.lastName}
                             </div>
                           ) : null,
                         },
@@ -303,22 +414,24 @@ export default function LeaveManagement() {
                           header: 'Employee',
                           cell: (item) => (
                             <div>
-                              <p className="font-medium">{item.employeeName}</p>
-                              <p className="text-sm text-muted-foreground">{item.employeeId}</p>
+                              <p className="font-medium">{item.userId.firstName} {item.userId.lastName}</p>
+                              <p className="text-sm text-muted-foreground">{item.userId.email}</p>
                             </div>
                           ),
                         },
                         {
                           key: 'leaveType',
                           header: 'Leave Type',
-                          cell: (item) => item.leaveType,
+                          cell: (item) => (
+                            <span className="capitalize">{item.leaveType.replace('_', ' ')}</span>
+                          ),
                         },
                         {
                           key: 'duration',
                           header: 'Duration',
                           cell: (item) => (
                             <div>
-                              <p className="font-medium">{item.days} days</p>
+                              <p className="font-medium">{calculateDays(item.startDate, item.endDate)} days</p>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
                               </p>
@@ -339,7 +452,8 @@ export default function LeaveManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleApproveLeave(item)}
-                                data-testid={`button-approve-pending-${item.id}`}
+                                data-testid={`button-approve-pending-${item._id}`}
+                                disabled={updateLeaveStatusMutation.isPending}
                               >
                                 <Check className="h-4 w-4 mr-1 text-green-600" />
                                 Approve
@@ -348,7 +462,8 @@ export default function LeaveManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRejectLeave(item)}
-                                data-testid={`button-reject-pending-${item.id}`}
+                                data-testid={`button-reject-pending-${item._id}`}
+                                disabled={updateLeaveStatusMutation.isPending}
                               >
                                 <X className="h-4 w-4 mr-1 text-red-600" />
                                 Reject
@@ -378,14 +493,16 @@ export default function LeaveManagement() {
                       {
                         key: 'leaveType',
                         header: 'Leave Type',
-                        cell: (item) => item.leaveType,
+                        cell: (item) => (
+                          <span className="capitalize">{item.leaveType.replace('_', ' ')}</span>
+                        ),
                       },
                       {
                         key: 'duration',
                         header: 'Duration',
                         cell: (item) => (
                           <div>
-                            <p className="font-medium">{item.days} days</p>
+                            <p className="font-medium">{calculateDays(item.startDate, item.endDate)} days</p>
                             <p className="text-sm text-muted-foreground">
                               {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
                             </p>
@@ -414,7 +531,7 @@ export default function LeaveManagement() {
                       {
                         key: 'applied',
                         header: 'Applied On',
-                        cell: (item) => new Date(item.appliedDate).toLocaleDateString(),
+                        cell: (item) => new Date(item.createdAt).toLocaleDateString(),
                       },
                     ]}
                   />

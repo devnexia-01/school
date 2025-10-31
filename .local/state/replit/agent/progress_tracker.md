@@ -42,3 +42,11 @@
 [x] 42. Application running on port 5000 and serving correctly
 [x] 43. Screenshot verification completed - Login page displaying with demo credentials
 [x] 44. All migration tasks marked as complete - Project ready for use
+[x] 45. October 31, 2025 - Fixed leave management bug in faculty section
+[x] 46. Removed hardcoded dummy data from LeaveManagement.tsx
+[x] 47. Integrated React Query for fetching leave requests from API
+[x] 48. Added useMutation for creating new leave requests with proper form validation
+[x] 49. Added useMutation for approving/rejecting leave requests
+[x] 50. Implemented proper cache invalidation - queryClient.invalidateQueries after mutations
+[x] 51. Leave requests now persist to MongoDB and display correctly in UI after creation
+[x] 52. Application restarted successfully - leave management working with real data
