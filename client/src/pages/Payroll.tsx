@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { DataTable } from '@/components/shared/DataTable';
@@ -16,15 +16,24 @@ import { useToast } from '@/hooks/use-toast';
 import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp, Users, CreditCard } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Payroll() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [generateMonth, setGenerateMonth] = useState('');
+  const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+  const [generatedPayrolls, setGeneratedPayrolls] = useState<any[]>([]);
 
   const canManagePayroll = user && ['admin', 'principal'].includes(user.role);
   const isFaculty = user && user.role === 'faculty';
+
+  const { data: facultyData } = useQuery<{ faculty: Array<any> }>({
+    queryKey: ['/api/faculty'],
+    enabled: !!canManagePayroll,
+  });
 
   // Fetch payroll data based on user role
   const { data: payrollData, isLoading } = useQuery<{ payrolls: Array<any> }>({
@@ -32,13 +41,68 @@ export default function Payroll() {
   });
 
   const payrollRecords = payrollData?.payrolls || [];
+  const faculty = facultyData?.faculty || [];
+
+  const generatePayrollMutation = useMutation({
+    mutationFn: async (data: { month: string; year: number }) => {
+      const results = [];
+      for (const facultyMember of faculty) {
+        const payrollData = {
+          userId: facultyMember._id,
+          month: data.month,
+          year: data.year,
+          basicSalary: 50000,
+          allowances: 10000,
+          deductions: 5000,
+          netSalary: 55000,
+          remarks: `Generated payroll for ${data.month} ${data.year}`,
+        };
+        const result = await apiRequest('/api/payroll', {
+          method: 'POST',
+          body: JSON.stringify(payrollData),
+        });
+        results.push({
+          ...result,
+          employeeName: `${facultyMember.firstName} ${facultyMember.lastName}`,
+          employeeId: facultyMember._id,
+          role: facultyMember.role,
+        });
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      setGeneratedPayrolls(results);
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll'] });
+      toast({
+        title: 'Success',
+        description: `Payroll generated for ${results.length} employees`,
+      });
+      setIsGenerateDialogOpen(false);
+      setGenerateMonth('');
+      setGenerateYear(new Date().getFullYear().toString());
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to generate payroll',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleGeneratePayroll = () => {
-    toast({
-      title: 'Payroll Generated',
-      description: 'Payroll for selected month has been generated successfully.',
+    if (!generateMonth || !generateYear) {
+      toast({
+        title: 'Error',
+        description: 'Please select month and year',
+        variant: 'destructive',
+      });
+      return;
+    }
+    generatePayrollMutation.mutate({
+      month: generateMonth,
+      year: parseInt(generateYear),
     });
-    setIsGenerateDialogOpen(false);
   };
 
   const handleProcessPayment = (record: any) => {
@@ -90,38 +154,47 @@ export default function Payroll() {
                   <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                       <Label htmlFor="month">Month</Label>
-                      <Select>
+                      <Select value={generateMonth} onValueChange={setGenerateMonth}>
                         <SelectTrigger data-testid="select-month">
                           <SelectValue placeholder="Select month" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="january-2025">January 2025</SelectItem>
-                          <SelectItem value="february-2025">February 2025</SelectItem>
-                          <SelectItem value="march-2025">March 2025</SelectItem>
+                          <SelectItem value="January">January</SelectItem>
+                          <SelectItem value="February">February</SelectItem>
+                          <SelectItem value="March">March</SelectItem>
+                          <SelectItem value="April">April</SelectItem>
+                          <SelectItem value="May">May</SelectItem>
+                          <SelectItem value="June">June</SelectItem>
+                          <SelectItem value="July">July</SelectItem>
+                          <SelectItem value="August">August</SelectItem>
+                          <SelectItem value="September">September</SelectItem>
+                          <SelectItem value="October">October</SelectItem>
+                          <SelectItem value="November">November</SelectItem>
+                          <SelectItem value="December">December</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="department">Department (Optional)</Label>
-                      <Select>
-                        <SelectTrigger data-testid="select-department">
-                          <SelectValue placeholder="All departments" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Departments</SelectItem>
-                          <SelectItem value="faculty">Faculty</SelectItem>
-                          <SelectItem value="admin">Administration</SelectItem>
-                          <SelectItem value="support">Support Staff</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="year">Year</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="2025" 
+                        value={generateYear}
+                        onChange={(e) => setGenerateYear(e.target.value)}
+                        data-testid="input-year"
+                      />
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsGenerateDialogOpen(false)} data-testid="button-cancel">
                       Cancel
                     </Button>
-                    <Button onClick={handleGeneratePayroll} data-testid="button-confirm-generate">
-                      Generate
+                    <Button 
+                      onClick={handleGeneratePayroll} 
+                      disabled={generatePayrollMutation.isPending}
+                      data-testid="button-confirm-generate"
+                    >
+                      {generatePayrollMutation.isPending ? 'Generating...' : 'Generate'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -153,6 +226,84 @@ export default function Payroll() {
             icon={Users}
           />
         </div>
+
+        {generatedPayrolls.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Generated Payroll - {generateMonth} {generateYear}</CardTitle>
+                  <CardDescription>Newly generated payroll records</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => {
+                  const csvContent = 'Employee Name,Employee ID,Basic Salary,Allowances,Deductions,Net Salary\n' +
+                    generatedPayrolls.map(p => 
+                      `${p.employeeName},${p.employeeId},${p.basicSalary},${p.allowances},${p.deductions},${p.netSalary}`
+                    ).join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `payroll-${generateMonth}-${generateYear}.csv`;
+                  a.click();
+                }} data-testid="button-download-payroll">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download CSV
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                data={generatedPayrolls}
+                emptyMessage="No generated payroll"
+                columns={[
+                  {
+                    key: 'employee',
+                    header: 'Employee',
+                    cell: (item) => (
+                      <div>
+                        <p className="font-medium">{item.employeeName}</p>
+                        <p className="text-sm text-muted-foreground">{item.employeeId} • {item.role}</p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'basicSalary',
+                    header: 'Basic Salary',
+                    cell: (item) => formatCurrencyINR(item.basicSalary),
+                  },
+                  {
+                    key: 'allowances',
+                    header: 'Allowances',
+                    cell: (item) => formatCurrencyINR(item.allowances),
+                  },
+                  {
+                    key: 'deductions',
+                    header: 'Deductions',
+                    cell: (item) => formatCurrencyINR(item.deductions),
+                  },
+                  {
+                    key: 'netSalary',
+                    header: 'Net Salary',
+                    cell: (item) => (
+                      <p className="font-semibold text-green-600">{formatCurrencyINR(item.netSalary)}</p>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (item) => (
+                      <Badge variant="secondary">
+                        {item.status || 'draft'}
+                      </Badge>
+                    ),
+                  },
+                ]}
+                testId="generated-payroll-table"
+              />
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

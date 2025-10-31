@@ -11,13 +11,15 @@ import { formatCurrencyINR } from '@/lib/utils';
 export default function Transport() {
   const { user } = useAuth();
   const isStudent = user?.role === 'student';
+  const canViewTransport = user && ['admin', 'principal', 'student'].includes(user.role);
 
-  const { data: transportData, isLoading } = useQuery({
-    queryKey: isStudent ? ['/api/student/transport'] : [],
-    enabled: isStudent,
+  const { data: transportData, isLoading } = useQuery<{ transport?: any; routes?: any[] }>({
+    queryKey: isStudent ? ['/api/student/transport'] : ['/api/transport/routes'],
+    enabled: !!canViewTransport,
   });
 
   const transport = transportData?.transport;
+  const routes = transportData?.routes || [];
   const route = transport?.routeId;
 
   if (isLoading) {
@@ -31,6 +33,82 @@ export default function Transport() {
     );
   }
 
+  // Admin/Principal view - show all routes
+  if (!isStudent) {
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 max-w-7xl">
+          <Breadcrumb items={[{ label: 'Transport Management' }]} />
+
+          <div>
+            <h1 className="text-3xl font-semibold">Transport Routes</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage all school transport routes and vehicles
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>All Transport Routes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {routes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No transport routes configured</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {routes.map((routeItem: any, index: number) => (
+                    <Card key={routeItem._id || index}>
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Route Info</p>
+                            <p className="font-semibold">{routeItem.routeName}</p>
+                            <p className="text-sm text-muted-foreground">Route #{routeItem.routeNumber}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Vehicle</p>
+                            <p className="font-semibold">{routeItem.vehicleNumber || 'N/A'}</p>
+                            <p className="text-sm text-muted-foreground">Capacity: {routeItem.capacity || 'N/A'} seats</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Driver</p>
+                            <p className="font-semibold">{routeItem.driverName || 'N/A'}</p>
+                            <p className="text-sm text-muted-foreground">{routeItem.driverPhone || 'N/A'}</p>
+                          </div>
+                        </div>
+                        {routeItem.stops && (
+                          <div className="mt-4">
+                            <p className="text-sm text-muted-foreground mb-2">Stops</p>
+                            <div className="flex flex-wrap gap-2">
+                              {routeItem.stops.split(',').map((stop: string, idx: number) => (
+                                <Badge key={idx} variant="secondary">{stop.trim()}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="mt-4 flex items-center gap-4">
+                          <Badge variant={routeItem.active ? 'default' : 'secondary'}>
+                            {routeItem.active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {routeItem.fare && (
+                            <span className="text-sm font-medium">{formatCurrencyINR(routeItem.fare)}/month</span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Student view - show assigned transport
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-5xl">
