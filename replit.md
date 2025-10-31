@@ -6,6 +6,15 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
 
 ## Recent Changes
 
+### Timetable and Attendance System Enhancements (October 31, 2025)
+- **Timetable UI Redesign**: Completely redesigned timetable page with modern day-wise layout showing colored time slot blocks organized by day with time ranges, durations, subject names, teacher names, and room locations
+- **Bulk Attendance API**: Implemented secure bulk attendance endpoint (`POST /api/attendance/bulk`) with comprehensive tenant isolation validation through storage layer
+- **Security Enhancement**: Added `bulkCreateAttendance` method to storage layer that validates every student and class belongs to the tenant before any database operations, preventing cross-tenant data access
+- **Timetable Data Population**: Verified timetable query properly populates subject (name, code) and teacher (firstName, lastName) information for complete contextual data display
+- **Attendance Data Loading**: Fixed attendance system to properly load and save different data for different dates (previously defaulted to "present" for all dates)
+- **Type Safety Improvements**: Added missing type exports (Payroll, LeaveRequest) to shared/schema.ts for better type checking across the application
+- **API Route Optimization**: Simplified bulk attendance route from ~35 lines of direct model manipulation to a clean 3-line storage call maintaining security
+
 ### MongoDB Migration (October 29, 2025)
 - **Database Migration**: Successfully migrated from PostgreSQL (Drizzle ORM) to MongoDB (Mongoose)
 - **Schema Conversion**: Converted all database schemas from Drizzle pgTable definitions to Mongoose schemas
