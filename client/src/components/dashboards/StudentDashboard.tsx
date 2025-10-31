@@ -49,12 +49,18 @@ export function StudentDashboard() {
     enabled: !!user,
   });
 
+  const { data: feePaymentsData } = useQuery({
+    queryKey: ['/api/fee-payments/student', profileData?.student?._id],
+    enabled: !!profileData?.student?._id,
+  });
+
   const student = profileData?.student;
   const userProfile = profileData?.user;
   const timetable = timetableData?.timetable || [];
   const results = examResults?.results || [];
   const transport = transportData?.transport;
   const announcements = announcementsData?.announcements || [];
+  const feePayments = feePaymentsData?.payments || [];
 
   const todaysTimetable = timetable
     .filter((item: any) => {
@@ -73,6 +79,33 @@ export function StudentDashboard() {
     const max = results.reduce((sum: number, r: any) => sum + (r.totalMarks || 100), 0);
     return ((total / max) * 4).toFixed(2);
   };
+
+  const calculateFeeStatus = () => {
+    const totalPaid = feePayments
+      .filter((p: any) => p.status === 'paid')
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
+    const totalPending = feePayments
+      .filter((p: any) => p.status === 'pending')
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
+    const totalOverdue = feePayments
+      .filter((p: any) => p.status === 'overdue')
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
+
+    const nextDuePayment = feePayments
+      .filter((p: any) => (p.status === 'pending' || p.status === 'overdue') && p.feeStructureId?.dueDate)
+      .sort((a: any, b: any) => new Date(a.feeStructureId.dueDate).getTime() - new Date(b.feeStructureId.dueDate).getTime())[0];
+
+    return {
+      status: totalOverdue > 0 ? 'Overdue' : totalPending > 0 ? 'Pending' : 'Paid',
+      statusColor: totalOverdue > 0 ? 'text-red-600' : totalPending > 0 ? 'text-orange-600' : 'text-green-600',
+      totalPaid,
+      totalPending,
+      totalOverdue,
+      nextDueDate: nextDuePayment?.feeStructureId?.dueDate ? format(new Date(nextDuePayment.feeStructureId.dueDate), 'MMM dd, yyyy') : null,
+    };
+  };
+
+  const feeStatus = calculateFeeStatus();
 
   if (profileLoading) {
     return (
@@ -167,10 +200,12 @@ export function StudentDashboard() {
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground font-medium">Fee Status</p>
-                  <p className="text-lg font-bold text-green-600" data-testid="text-fee-status">
-                    Paid
+                  <p className={`text-lg font-bold ${feeStatus.statusColor}`} data-testid="text-fee-status">
+                    {feeStatus.status}
                   </p>
-                  <p className="text-xs text-muted-foreground">Next due: Feb 1, 2025</p>
+                  <p className="text-xs text-muted-foreground">
+                    {feeStatus.nextDueDate ? `Next due: ${feeStatus.nextDueDate}` : 'No pending fees'}
+                  </p>
                 </div>
                 <div className="p-3 bg-primary/10 rounded-lg">
                   <IndianRupee className="h-6 w-6 text-primary" />
