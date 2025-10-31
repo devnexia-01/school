@@ -103,7 +103,7 @@ const menuItems: MenuItem[] = [
     title: 'Payroll',
     icon: Wallet,
     path: '/payroll',
-    roles: ['admin'],
+    roles: ['admin', 'principal', 'faculty'],
   },
   {
     title: 'Transport',

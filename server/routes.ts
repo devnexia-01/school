@@ -848,6 +848,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Payroll Routes ============
+  app.get('/api/payroll', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { month, year } = req.query;
+      const payrolls = await storage.getPayrollByTenant(tenantId, month as string, year ? Number(year) : undefined);
+      res.json({ payrolls });
+    } catch (error) {
+      console.error('Get payrolls error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/payroll/my', authenticateToken, tenantIsolation, requireRole(['faculty']), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const payrolls = await storage.getPayrollByUser(userId, tenantId);
+      res.json({ payrolls });
+    } catch (error) {
+      console.error('Get my payrolls error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/payroll', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { userId, month, year, basicSalary, allowances, deductions, netSalary, remarks } = req.body;
+      
+      const payroll = await storage.createPayroll({
+        tenantId,
+        userId,
+        month,
+        year,
+        basicSalary,
+        allowances: allowances || 0,
+        deductions: deductions || 0,
+        netSalary,
+        status: 'draft',
+        remarks,
+        createdAt: new Date(),
+      });
+      
+      res.status(201).json(payroll);
+    } catch (error) {
+      console.error('Create payroll error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/payroll/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const payroll = await storage.updatePayroll(id, tenantId, updateData);
+      res.json(payroll);
+    } catch (error) {
+      console.error('Update payroll error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Leave Management Routes ============
+  app.get('/api/leave-requests', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const userRole = req.user!.role;
+      
+      // Faculty sees only their own leave requests
+      if (userRole === 'faculty') {
+        const leaveRequests = await storage.getLeaveRequestsByUser(userId, tenantId);
+        return res.json({ leaveRequests });
+      }
+      
+      // Admin/Principal see all leave requests in their tenant
+      const { status } = req.query;
+      const leaveRequests = await storage.getLeaveRequestsByTenant(tenantId, status as string);
+      res.json({ leaveRequests });
+    } catch (error) {
+      console.error('Get leave requests error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/leave-requests', authenticateToken, tenantIsolation, requireRole(['faculty']), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      const { leaveType, startDate, endDate, reason } = req.body;
+      
+      const leaveRequest = await storage.createLeaveRequest({
+        tenantId,
+        userId,
+        leaveType,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        reason,
+        status: 'pending',
+        createdAt: new Date(),
+      });
+      
+      res.status(201).json(leaveRequest);
+    } catch (error) {
+      console.error('Create leave request error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/leave-requests/:id', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      // If approving/rejecting, add reviewer info
+      if (updateData.status && updateData.status !== 'pending') {
+        updateData.reviewedBy = req.user!.id;
+        updateData.reviewedAt = new Date();
+      }
+      
+      const leaveRequest = await storage.updateLeaveRequest(id, tenantId, updateData);
+      res.json(leaveRequest);
+    } catch (error) {
+      console.error('Update leave request error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/leave-requests/:id', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      
+      await storage.deleteLeaveRequest(id, tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete leave request error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

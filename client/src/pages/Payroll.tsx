@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { DataTable } from '@/components/shared/DataTable';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, IndianRupee, Eye } from 'lucide-react';
+import { Plus, Download, IndianRupee, Eye, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -19,65 +20,18 @@ import { formatCurrencyINR } from '@/lib/utils';
 export default function Payroll() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedMonth, setSelectedMonth] = useState('january-2025');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
 
-  const canManagePayroll = user && ['admin'].includes(user.role);
+  const canManagePayroll = user && ['admin', 'principal'].includes(user.role);
+  const isFaculty = user && user.role === 'faculty';
 
-  const payrollRecords = [
-    {
-      id: '1',
-      employeeName: 'Ms. Anderson',
-      employeeId: 'EMP001',
-      role: 'Faculty',
-      basicSalary: 4500,
-      allowances: 500,
-      deductions: 200,
-      netSalary: 4800,
-      month: 'January 2025',
-      status: 'paid',
-      paidDate: '2025-01-31',
-    },
-    {
-      id: '2',
-      employeeName: 'Dr. Williams',
-      employeeId: 'EMP002',
-      role: 'Faculty',
-      basicSalary: 5500,
-      allowances: 700,
-      deductions: 250,
-      netSalary: 5950,
-      month: 'January 2025',
-      status: 'paid',
-      paidDate: '2025-01-31',
-    },
-    {
-      id: '3',
-      employeeName: 'Mr. Johnson',
-      employeeId: 'EMP003',
-      role: 'Faculty',
-      basicSalary: 4200,
-      allowances: 450,
-      deductions: 180,
-      netSalary: 4470,
-      month: 'January 2025',
-      status: 'paid',
-      paidDate: '2025-01-31',
-    },
-    {
-      id: '4',
-      employeeName: 'Mrs. Brown',
-      employeeId: 'EMP004',
-      role: 'Faculty',
-      basicSalary: 4800,
-      allowances: 550,
-      deductions: 210,
-      netSalary: 5140,
-      month: 'January 2025',
-      status: 'approved',
-      paidDate: null,
-    },
-  ];
+  // Fetch payroll data based on user role
+  const { data: payrollData, isLoading } = useQuery<{ payrolls: Array<any> }>({
+    queryKey: isFaculty ? ['/api/payroll/my'] : ['/api/payroll'],
+  });
+
+  const payrollRecords = payrollData?.payrolls || [];
 
   const handleGeneratePayroll = () => {
     toast({

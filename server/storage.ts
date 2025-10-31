@@ -17,6 +17,8 @@ import {
   TimetableModel,
   StudentTransportModel,
   TransportRouteModel,
+  PayrollModel,
+  LeaveRequestModel,
   type User,
   type InsertUser,
   type Tenant,
@@ -45,6 +47,8 @@ import {
   type InsertUserPreference,
   type Message,
   type Notification,
+  type Payroll,
+  type LeaveRequest,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -152,6 +156,19 @@ export interface IStorage {
   getFacultyByTenant(tenantId: string): Promise<any[]>;
   updateUser(userId: string, tenantId: string, userData: Partial<InsertUser>): Promise<User>;
   deleteUser(userId: string, tenantId: string): Promise<void>;
+  
+  // Payroll Management
+  getPayrollByUser(userId: string, tenantId: string): Promise<Payroll[]>;
+  getPayrollByTenant(tenantId: string, month?: string, year?: number): Promise<any[]>;
+  createPayroll(payroll: Partial<Payroll>): Promise<Payroll>;
+  updatePayroll(payrollId: string, tenantId: string, payrollData: Partial<Payroll>): Promise<Payroll>;
+  
+  // Leave Management
+  getLeaveRequestsByUser(userId: string, tenantId: string): Promise<LeaveRequest[]>;
+  getLeaveRequestsByTenant(tenantId: string, status?: string): Promise<any[]>;
+  createLeaveRequest(leaveRequest: Partial<LeaveRequest>): Promise<LeaveRequest>;
+  updateLeaveRequest(leaveId: string, tenantId: string, updateData: Partial<LeaveRequest>): Promise<LeaveRequest>;
+  deleteLeaveRequest(leaveId: string, tenantId: string): Promise<void>;
 }
 
 function toPlainObject(doc: any): any {
@@ -996,6 +1013,103 @@ export class DatabaseStorage implements IStorage {
     }
     
     return toPlainObject(transport);
+  }
+  
+  // Payroll Management
+  async getPayrollByUser(userId: string, tenantId: string): Promise<Payroll[]> {
+    const payrolls = await PayrollModel.find({
+      tenantId,
+      userId
+    })
+    .sort({ year: -1, month: -1 })
+    .lean();
+    
+    return payrolls.map(toPlainObject);
+  }
+  
+  async getPayrollByTenant(tenantId: string, month?: string, year?: number): Promise<any[]> {
+    const query: any = { tenantId };
+    if (month) query.month = month;
+    if (year) query.year = year;
+    
+    const payrolls = await PayrollModel.find(query)
+    .populate('userId', 'firstName lastName email')
+    .sort({ year: -1, month: -1 })
+    .lean();
+    
+    return payrolls.map(toPlainObject);
+  }
+  
+  async createPayroll(payroll: Partial<Payroll>): Promise<Payroll> {
+    const newPayroll = await PayrollModel.create(payroll);
+    return toPlainObject(newPayroll.toObject());
+  }
+  
+  async updatePayroll(payrollId: string, tenantId: string, payrollData: Partial<Payroll>): Promise<Payroll> {
+    const payroll = await PayrollModel.findOneAndUpdate(
+      { _id: payrollId, tenantId },
+      payrollData,
+      { new: true }
+    ).lean();
+    
+    if (!payroll) {
+      throw new Error('Payroll not found or access denied');
+    }
+    
+    return toPlainObject(payroll);
+  }
+  
+  // Leave Management
+  async getLeaveRequestsByUser(userId: string, tenantId: string): Promise<LeaveRequest[]> {
+    const leaveRequests = await LeaveRequestModel.find({
+      tenantId,
+      userId
+    })
+    .populate('reviewedBy', 'firstName lastName')
+    .sort({ createdAt: -1 })
+    .lean();
+    
+    return leaveRequests.map(toPlainObject);
+  }
+  
+  async getLeaveRequestsByTenant(tenantId: string, status?: string): Promise<any[]> {
+    const query: any = { tenantId };
+    if (status) query.status = status;
+    
+    const leaveRequests = await LeaveRequestModel.find(query)
+    .populate('userId', 'firstName lastName email')
+    .populate('reviewedBy', 'firstName lastName')
+    .sort({ createdAt: -1 })
+    .lean();
+    
+    return leaveRequests.map(toPlainObject);
+  }
+  
+  async createLeaveRequest(leaveRequest: Partial<LeaveRequest>): Promise<LeaveRequest> {
+    const newLeaveRequest = await LeaveRequestModel.create(leaveRequest);
+    return toPlainObject(newLeaveRequest.toObject());
+  }
+  
+  async updateLeaveRequest(leaveId: string, tenantId: string, updateData: Partial<LeaveRequest>): Promise<LeaveRequest> {
+    const leaveRequest = await LeaveRequestModel.findOneAndUpdate(
+      { _id: leaveId, tenantId },
+      updateData,
+      { new: true }
+    ).lean();
+    
+    if (!leaveRequest) {
+      throw new Error('Leave request not found or access denied');
+    }
+    
+    return toPlainObject(leaveRequest);
+  }
+  
+  async deleteLeaveRequest(leaveId: string, tenantId: string): Promise<void> {
+    const result = await LeaveRequestModel.findOneAndDelete({ _id: leaveId, tenantId });
+    
+    if (!result) {
+      throw new Error('Leave request not found or access denied');
+    }
   }
 }
 
