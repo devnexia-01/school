@@ -1,15 +1,30 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Clock, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface TimetableEntry {
   _id: string;
+  classId: {
+    _id: string;
+    name: string;
+    grade: number;
+    section: string;
+  };
   subjectId: {
     _id: string;
     name: string;
@@ -24,6 +39,7 @@ interface TimetableEntry {
   startTime: string;
   endTime: string;
   roomNumber?: string;
+  academicYear: string;
 }
 
 interface Class {
@@ -31,6 +47,18 @@ interface Class {
   name: string;
   grade: number;
   section: string;
+}
+
+interface Subject {
+  _id: string;
+  name: string;
+  code: string;
+}
+
+interface Teacher {
+  _id: string;
+  firstName: string;
+  lastName: string;
 }
 
 const DAYS_MAP: { [key: string]: string } = {
@@ -51,6 +79,19 @@ const COLORS = [
   'bg-pink-500 dark:bg-pink-600',
 ];
 
+const timetableSchema = z.object({
+  classId: z.string().min(1, 'Class is required'),
+  subjectId: z.string().min(1, 'Subject is required'),
+  teacherId: z.string().min(1, 'Teacher is required'),
+  dayOfWeek: z.string().min(1, 'Day is required'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  roomNumber: z.string().optional(),
+  academicYear: z.string().min(1, 'Academic year is required'),
+});
+
+type TimetableFormData = z.infer<typeof timetableSchema>;
+
 function calculateDuration(startTime: string, endTime: string): string {
   const [startHour, startMin] = startTime.split(':').map(Number);
   const [endHour, endMin] = endTime.split(':').map(Number);
@@ -68,11 +109,26 @@ function formatTime(time: string): string {
 
 export default function Timetable() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedClass, setSelectedClass] = useState<string>('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+
+  const canManage = user?.role === 'admin' || user?.role === 'principal' || user?.role === 'super_admin';
 
   const { data: classesData } = useQuery<{ classes: Class[] }>({
     queryKey: ['/api/classes'],
     enabled: user?.role !== 'student',
+  });
+
+  const { data: subjectsData } = useQuery<{ subjects: Subject[] }>({
+    queryKey: ['/api/subjects'],
+    enabled: canManage,
+  });
+
+  const { data: teachersData } = useQuery<{ users: Teacher[] }>({
+    queryKey: ['/api/users?role=faculty'],
+    enabled: canManage,
   });
 
   const { data: timetableData, isLoading } = useQuery<{ timetable: TimetableEntry[] }>({
@@ -83,13 +139,140 @@ export default function Timetable() {
   });
 
   const classes = classesData?.classes || [];
+  const subjects = subjectsData?.subjects || [];
+  const teachers = teachersData?.users || [];
   const timetable = timetableData?.timetable || [];
+
+  const form = useForm<TimetableFormData>({
+    resolver: zodResolver(timetableSchema),
+    defaultValues: {
+      classId: '',
+      subjectId: '',
+      teacherId: '',
+      dayOfWeek: '',
+      startTime: '',
+      endTime: '',
+      roomNumber: '',
+      academicYear: new Date().getFullYear().toString(),
+    },
+  });
 
   useEffect(() => {
     if (classes.length > 0 && !selectedClass && user?.role !== 'student') {
       setSelectedClass(classes[0]._id);
     }
   }, [classes, selectedClass, user]);
+
+  useEffect(() => {
+    if (editingEntry) {
+      form.reset({
+        classId: editingEntry.classId._id,
+        subjectId: editingEntry.subjectId._id,
+        teacherId: editingEntry.teacherId._id,
+        dayOfWeek: editingEntry.dayOfWeek,
+        startTime: editingEntry.startTime,
+        endTime: editingEntry.endTime,
+        roomNumber: editingEntry.roomNumber || '',
+        academicYear: editingEntry.academicYear,
+      });
+    } else {
+      form.reset({
+        classId: selectedClass,
+        subjectId: '',
+        teacherId: '',
+        dayOfWeek: '',
+        startTime: '',
+        endTime: '',
+        roomNumber: '',
+        academicYear: new Date().getFullYear().toString(),
+      });
+    }
+  }, [editingEntry, form, selectedClass]);
+
+  const createMutation = useMutation({
+    mutationFn: (data: TimetableFormData) => apiRequest('/api/timetable', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      toast({ title: 'Success', description: 'Timetable entry created successfully' });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to create timetable entry',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TimetableFormData }) => 
+      apiRequest(`/api/timetable/${id}`, 'PUT', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      toast({ title: 'Success', description: 'Timetable entry updated successfully' });
+      setIsDialogOpen(false);
+      setEditingEntry(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to update timetable entry',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/timetable/${id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      toast({ title: 'Success', description: 'Timetable entry deleted successfully' });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message || 'Failed to delete timetable entry',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  const onSubmit = (data: TimetableFormData) => {
+    if (editingEntry) {
+      updateMutation.mutate({ id: editingEntry._id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEdit = (entry: TimetableEntry) => {
+    setEditingEntry(entry);
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this timetable entry?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingEntry(null);
+    form.reset({
+      classId: selectedClass,
+      subjectId: '',
+      teacherId: '',
+      dayOfWeek: '',
+      startTime: '',
+      endTime: '',
+      roomNumber: '',
+      academicYear: new Date().getFullYear().toString(),
+    });
+    setIsDialogOpen(true);
+  };
 
   const groupedByDay = timetable.reduce((acc, entry) => {
     const day = entry.dayOfWeek;
@@ -116,20 +299,210 @@ export default function Timetable() {
         {user?.role !== 'student' && (
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium">Select Class:</label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger className="w-[250px]" data-testid="select-class">
-                    <SelectValue placeholder="Select a class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls._id} value={cls._id}>
-                        Class {cls.grade} {cls.section}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-4 justify-between">
+                <div className="flex items-center gap-4 flex-1">
+                  <label className="text-sm font-medium">Select Class:</label>
+                  <Select value={selectedClass} onValueChange={setSelectedClass}>
+                    <SelectTrigger className="w-[250px]" data-testid="select-class">
+                      <SelectValue placeholder="Select a class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls._id} value={cls._id}>
+                          Class {cls.grade} {cls.section}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {canManage && selectedClass && (
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={handleAddNew} data-testid="button-add-timetable">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Entry
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingEntry ? 'Edit Timetable Entry' : 'Add Timetable Entry'}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                          <FormField
+                            control={form.control}
+                            name="classId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Class</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-form-class">
+                                      <SelectValue placeholder="Select class" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {classes.map((cls) => (
+                                      <SelectItem key={cls._id} value={cls._id}>
+                                        Class {cls.grade} {cls.section}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="subjectId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Subject</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-subject">
+                                      <SelectValue placeholder="Select subject" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {subjects.map((subject) => (
+                                      <SelectItem key={subject._id} value={subject._id}>
+                                        {subject.name} ({subject.code})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="teacherId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Teacher</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-teacher">
+                                      <SelectValue placeholder="Select teacher" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {teachers.map((teacher) => (
+                                      <SelectItem key={teacher._id} value={teacher._id}>
+                                        {teacher.firstName} {teacher.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="dayOfWeek"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Day of Week</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-day">
+                                      <SelectValue placeholder="Select day" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {Object.keys(DAYS_MAP).map((day) => (
+                                      <SelectItem key={day} value={day}>
+                                        {DAYS_MAP[day]}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="startTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Start Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="time" {...field} data-testid="input-start-time" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="endTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>End Time</FormLabel>
+                                  <FormControl>
+                                    <Input type="time" {...field} data-testid="input-end-time" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="roomNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Room Number (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., Room 101" {...field} data-testid="input-room" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="academicYear"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Academic Year</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., 2025" {...field} data-testid="input-year" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <DialogFooter>
+                            <Button 
+                              type="submit" 
+                              disabled={createMutation.isPending || updateMutation.isPending}
+                              data-testid="button-save-timetable"
+                            >
+                              {editingEntry ? 'Update' : 'Create'}
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -149,7 +522,9 @@ export default function Timetable() {
                 <p className="text-sm mt-2">
                   {user?.role === 'student' 
                     ? 'Your class timetable has not been set up yet.'
-                    : 'Please select a class or add timetable entries.'}
+                    : canManage 
+                      ? 'Click "Add Entry" to create timetable entries.'
+                      : 'Please select a class or add timetable entries.'}
                 </p>
               </div>
             </CardContent>
@@ -173,9 +548,32 @@ export default function Timetable() {
                         return (
                           <div
                             key={entry._id}
-                            className={`${colorClass} text-white rounded-lg p-4 min-w-[200px] flex-1 shadow-md hover:shadow-lg transition-shadow`}
+                            className={`${colorClass} text-white rounded-lg p-4 min-w-[200px] flex-1 shadow-md hover:shadow-lg transition-shadow relative group`}
                             data-testid={`timetable-entry-${entry._id}`}
                           >
+                            {canManage && (
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => handleEdit(entry)}
+                                  data-testid={`button-edit-${entry._id}`}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => handleDelete(entry._id)}
+                                  data-testid={`button-delete-${entry._id}`}
+                                  disabled={deleteMutation.isPending}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                             <div className="space-y-2">
                               <div className="font-semibold text-sm">{timeRange}</div>
                               <div className="text-xs opacity-90">{duration}</div>
