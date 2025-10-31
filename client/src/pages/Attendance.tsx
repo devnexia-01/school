@@ -38,6 +38,14 @@ interface Student {
   status: string;
 }
 
+interface AttendanceRecord {
+  _id: string;
+  studentId: string;
+  classId: string;
+  date: string;
+  status: AttendanceStatus;
+}
+
 export default function Attendance() {
   const { toast } = useToast();
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -52,8 +60,14 @@ export default function Attendance() {
     queryKey: ['/api/students'],
   });
 
+  const { data: existingAttendanceData } = useQuery<{ attendance: AttendanceRecord[] }>({
+    queryKey: ['/api/attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd')],
+    enabled: !!selectedClass,
+  });
+
   const classes = classesData?.classes || [];
   const allStudents = studentsData?.students || [];
+  const existingAttendance = existingAttendanceData?.attendance || [];
 
   useEffect(() => {
     if (classes.length > 0 && !selectedClass) {
@@ -72,16 +86,20 @@ export default function Attendance() {
 
       const classStudents = allStudents
         .filter(s => s.class === selectedClassName)
-        .map(s => ({
-          id: s.id,
-          name: s.name,
-          rollNumber: s.rollNumber || 'N/A',
-          status: 'present' as AttendanceStatus,
-        }));
+        .map(s => {
+          const existingRecord = existingAttendance.find(a => a.studentId === s.id);
+          
+          return {
+            id: s.id,
+            name: s.name,
+            rollNumber: s.rollNumber || 'N/A',
+            status: existingRecord?.status || 'present' as AttendanceStatus,
+          };
+        });
       
       setAttendanceData(classStudents);
     }
-  }, [selectedClass, allStudents, classes]);
+  }, [selectedClass, allStudents, classes, existingAttendance]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

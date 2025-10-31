@@ -50,3 +50,11 @@
 [x] 50. Implemented proper cache invalidation - queryClient.invalidateQueries after mutations
 [x] 51. Leave requests now persist to MongoDB and display correctly in UI after creation
 [x] 52. Application restarted successfully - leave management working with real data
+[x] 53. October 31, 2025 - Fixed leave requests not showing for faculty users
+[x] 54. Updated storage method to populate userId field for faculty leave requests
+[x] 55. Faculty users can now see their submitted leave requests in "My Requests" tab
+[x] 56. Fixed attendance feature to load existing attendance data
+[x] 57. Added query to fetch existing attendance records for selected date and class
+[x] 58. Attendance now shows previously marked data instead of always defaulting to "present"
+[x] 59. Teachers can now view and update attendance for different dates
+[x] 60. Application restarted successfully - both features working with real database data

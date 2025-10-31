@@ -1065,6 +1065,7 @@ export class DatabaseStorage implements IStorage {
       tenantId,
       userId
     })
+    .populate('userId', 'firstName lastName email')
     .populate('reviewedBy', 'firstName lastName')
     .sort({ createdAt: -1 })
     .lean();
