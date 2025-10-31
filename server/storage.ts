@@ -1066,6 +1066,71 @@ export class DatabaseStorage implements IStorage {
     
     return timetable.map(toPlainObject);
   }
+
+  async createTimetable(data: any): Promise<any> {
+    const timetable = await TimetableModel.create(data);
+    const populated = await TimetableModel.findById(timetable._id)
+      .populate('subjectId', 'name code')
+      .populate('teacherId', 'firstName lastName')
+      .populate('classId', 'name grade section')
+      .lean();
+    return toPlainObject(populated);
+  }
+
+  async updateTimetable(id: string, data: any, tenantId: string): Promise<any> {
+    const updated = await TimetableModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      data,
+      { new: true }
+    )
+    .populate('subjectId', 'name code')
+    .populate('teacherId', 'firstName lastName')
+    .populate('classId', 'name grade section')
+    .lean();
+    
+    return updated ? toPlainObject(updated) : null;
+  }
+
+  async deleteTimetable(id: string, tenantId: string): Promise<boolean> {
+    const result = await TimetableModel.findOneAndDelete({ _id: id, tenantId });
+    return !!result;
+  }
+
+  async checkTimetableConflict(
+    classId: string,
+    dayOfWeek: string,
+    startTime: string,
+    endTime: string,
+    tenantId: string,
+    excludeId: string | null
+  ): Promise<boolean> {
+    const query: any = {
+      tenantId,
+      classId,
+      dayOfWeek
+    };
+
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const existingEntries = await TimetableModel.find(query).lean();
+
+    for (const entry of existingEntries) {
+      const existingStart = entry.startTime;
+      const existingEnd = entry.endTime;
+
+      if (
+        (startTime >= existingStart && startTime < existingEnd) ||
+        (endTime > existingStart && endTime <= existingEnd) ||
+        (startTime <= existingStart && endTime >= existingEnd)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
   
   async getStudentExamResults(studentId: string, tenantId: string): Promise<any[]> {
     const results = await ExamResultModel.find({
