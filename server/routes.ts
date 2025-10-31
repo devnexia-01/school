@@ -464,6 +464,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/timetable', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const timetableData = { ...req.body, tenantId };
+      
+      const conflictCheck = await storage.checkTimetableConflict(
+        timetableData.classId,
+        timetableData.dayOfWeek,
+        timetableData.startTime,
+        timetableData.endTime,
+        tenantId,
+        null
+      );
+      
+      if (conflictCheck) {
+        return res.status(409).json({ error: 'Time slot conflict detected for this class' });
+      }
+
+      const timetable = await storage.createTimetable(timetableData);
+      res.status(201).json(timetable);
+    } catch (error) {
+      console.error('Create timetable error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/timetable/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const conflictCheck = await storage.checkTimetableConflict(
+        updateData.classId,
+        updateData.dayOfWeek,
+        updateData.startTime,
+        updateData.endTime,
+        tenantId,
+        id
+      );
+      
+      if (conflictCheck) {
+        return res.status(409).json({ error: 'Time slot conflict detected for this class' });
+      }
+
+      const updatedTimetable = await storage.updateTimetable(id, updateData, tenantId);
+      if (!updatedTimetable) {
+        return res.status(404).json({ error: 'Timetable entry not found' });
+      }
+      res.json(updatedTimetable);
+    } catch (error) {
+      console.error('Update timetable error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/timetable/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      
+      const deleted = await storage.deleteTimetable(id, tenantId);
+      if (!deleted) {
+        return res.status(404).json({ error: 'Timetable entry not found' });
+      }
+      res.json({ message: 'Timetable entry deleted successfully' });
+    } catch (error) {
+      console.error('Delete timetable error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Exams Routes ============
   app.get('/api/exams', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
