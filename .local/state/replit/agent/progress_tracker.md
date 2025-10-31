@@ -95,3 +95,26 @@
 [x] 95. Screenshot verification completed - Login page displaying correctly with demo credentials
 [x] 96. All migration tasks completed - School ERP fully operational in Replit environment
 [x] 97. Project ready for development and production use - October 31, 2025
+[x] 98. October 31, 2025 - Implemented Add Class and Add Subject dialogs in Academics page
+[x] 99. Created full form dialogs with backend integration to create new classes and subjects
+[x] 100. Added numeric validation for grade and capacity fields using z.coerce.number().positive()
+[x] 101. POST /api/classes and POST /api/subjects endpoints integrated with React Query mutations
+[x] 102. Forms properly close and reset after successful creation with cache invalidation
+[x] 103. October 31, 2025 - Changed timetable form to use text inputs instead of dropdowns
+[x] 104. Replaced Select dropdowns with text Input fields for className, subjectName, teacherName, and dayOfWeek
+[x] 105. Updated form schema and handling to support flexible text-based data entry
+[x] 106. October 31, 2025 - Implemented payroll generation feature with results display and CSV export
+[x] 107. Added generate payroll button that creates payroll records for all faculty members
+[x] 108. Implemented sequential POST requests to create individual payroll entries
+[x] 109. Added generated payrolls results table displaying all newly created records
+[x] 110. Integrated CSV download functionality for generated payroll data
+[x] 111. Fixed dialog UX - now closes and resets month/year selection after successful generation
+[x] 112. Added loading states during generation process with proper mutation handling
+[x] 113. October 31, 2025 - Added admin and principal permissions to Transport page
+[x] 114. Implemented distinct admin/principal view showing all transport routes in card list format
+[x] 115. Admin/principal view displays route info, vehicle details, driver info, stops as badges, and fare
+[x] 116. Maintained separate student view showing assigned transport with route details
+[x] 117. Proper conditional rendering based on user role (isStudent flag)
+[x] 118. Architect reviewed all features - approved with all critical issues resolved
+[x] 119. Application workflow restarted successfully - all features working correctly
+[x] 120. October 31, 2025 - Four major features implemented and fully operational
