@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/exams', authenticateToken, tenantIsolation, requireRole(['admin', 'super_admin']), async (req: AuthRequest, res) => {
+  app.post('/api/exams', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
       const examData = { ...req.body, tenantId };

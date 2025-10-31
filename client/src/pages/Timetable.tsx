@@ -140,8 +140,8 @@ export default function Timetable() {
     enabled: canManage,
   });
 
-  const { data: teachersData } = useQuery<{ users: Teacher[] }>({
-    queryKey: ['/api/users?role=faculty'],
+  const { data: teachersData } = useQuery<{ faculty: Teacher[] }>({
+    queryKey: ['/api/faculty'],
     enabled: canManage,
   });
 
@@ -154,7 +154,7 @@ export default function Timetable() {
 
   const classes = classesData?.classes || [];
   const subjects = subjectsData?.subjects || [];
-  const teachers = teachersData?.users || [];
+  const teachers = teachersData?.faculty || [];
   const timetable = timetableData?.timetable || [];
 
   const form = useForm<TimetableFormData>({
