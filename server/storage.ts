@@ -82,6 +82,7 @@ export interface IStorage {
   // Attendance
   getAttendanceByDate(classId: string, date: string, tenantId: string): Promise<Attendance[]>;
   createAttendance(attendanceData: InsertAttendance): Promise<Attendance>;
+  bulkCreateAttendance(attendanceRecords: any[], tenantId: string, markedBy: string): Promise<{ success: boolean; count: number }>;
   
   // Exams
   getExamsByTenant(tenantId: string): Promise<Exam[]>;
@@ -151,6 +152,9 @@ export interface IStorage {
   getStudentExamResults(studentId: string, tenantId: string): Promise<any[]>;
   getStudentTransportDetails(studentId: string, tenantId: string): Promise<any>;
   getStudentByUserId(userId: string, tenantId: string): Promise<Student | undefined>;
+  
+  // Timetable Management
+  getTimetableByClass(classId: string, tenantId: string): Promise<any[]>;
   
   // Faculty Management
   getFacultyByTenant(tenantId: string): Promise<any[]>;
@@ -322,6 +326,68 @@ export class DatabaseStorage implements IStorage {
   async createAttendance(insertAttendance: InsertAttendance): Promise<Attendance> {
     const attendanceRecord = await AttendanceModel.create(insertAttendance);
     return toPlainObject(attendanceRecord);
+  }
+
+  async bulkCreateAttendance(attendanceRecords: any[], tenantId: string, markedBy: string): Promise<{ success: boolean; count: number }> {
+    let processedCount = 0;
+
+    for (const record of attendanceRecords) {
+      const student = await StudentModel.findOne({ 
+        _id: record.studentId, 
+        tenantId 
+      }).lean();
+      
+      if (!student) {
+        throw new Error(`Student ${record.studentId} not found or does not belong to tenant ${tenantId}`);
+      }
+
+      const classData = await ClassModel.findOne({ 
+        _id: record.classId, 
+        tenantId 
+      }).lean();
+      
+      if (!classData) {
+        throw new Error(`Class ${record.classId} not found or does not belong to tenant ${tenantId}`);
+      }
+
+      const existingRecord = await AttendanceModel.findOne({
+        studentId: record.studentId,
+        classId: record.classId,
+        date: new Date(record.date),
+        tenantId,
+      });
+
+      if (existingRecord) {
+        await AttendanceModel.findOneAndUpdate(
+          {
+            studentId: record.studentId,
+            classId: record.classId,
+            date: new Date(record.date),
+            tenantId,
+          },
+          {
+            status: record.status,
+            markedBy: markedBy,
+            remarks: record.remarks || undefined,
+          },
+          { new: true }
+        );
+      } else {
+        await AttendanceModel.create({
+          studentId: record.studentId,
+          classId: record.classId,
+          date: new Date(record.date),
+          status: record.status,
+          tenantId,
+          markedBy: markedBy,
+          remarks: record.remarks || undefined,
+        });
+      }
+
+      processedCount++;
+    }
+
+    return { success: true, count: processedCount };
   }
 
   // Exams
@@ -982,6 +1048,20 @@ export class DatabaseStorage implements IStorage {
     .populate('subjectId', 'name code')
     .populate('teacherId', 'firstName lastName')
     .sort({ day: 1, startTime: 1 })
+    .lean();
+    
+    return timetable.map(toPlainObject);
+  }
+  
+  async getTimetableByClass(classId: string, tenantId: string): Promise<any[]> {
+    const timetable = await TimetableModel.find({
+      tenantId,
+      classId
+    })
+    .populate('subjectId', 'name code')
+    .populate('teacherId', 'firstName lastName')
+    .populate('classId', 'name grade section')
+    .sort({ dayOfWeek: 1, startTime: 1 })
     .lean();
     
     return timetable.map(toPlainObject);

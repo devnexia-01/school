@@ -592,6 +592,37 @@ export type Notification = {
   createdAt: Date;
 };
 
+export type Payroll = {
+  _id: string;
+  tenantId: string;
+  userId: string;
+  month: string;
+  year: number;
+  basicSalary: number;
+  allowances: number;
+  deductions: number;
+  netSalary: number;
+  status: string;
+  paidOn?: Date;
+  remarks?: string;
+  createdAt: Date;
+};
+
+export type LeaveRequest = {
+  _id: string;
+  tenantId: string;
+  userId: string;
+  leaveType: string;
+  startDate: Date;
+  endDate: Date;
+  reason: string;
+  status: string;
+  reviewedBy?: string;
+  reviewedAt?: Date;
+  reviewNotes?: string;
+  createdAt: Date;
+};
+
 // Insert types (omit _id and fields with defaults)
 export type InsertTenant = Omit<Tenant, '_id' | 'createdAt' | 'active'> & { active?: boolean };
 export type InsertUser = Omit<User, '_id' | 'createdAt' | 'active'> & { active?: boolean };

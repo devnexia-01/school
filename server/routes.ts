@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, tenantIsolation, generateToken, type AuthRequest } from "./middleware/auth";
-import { insertTenantSchema } from "@shared/schema";
+import { insertTenantSchema, AttendanceModel } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 
@@ -420,6 +420,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(attendance);
     } catch (error) {
       console.error('Create attendance error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/attendance/bulk', authenticateToken, tenantIsolation, requireRole(['admin', 'faculty', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { attendanceRecords } = req.body;
+      
+      if (!Array.isArray(attendanceRecords) || attendanceRecords.length === 0) {
+        return res.status(400).json({ error: 'attendanceRecords must be a non-empty array' });
+      }
+
+      const result = await storage.bulkCreateAttendance(
+        attendanceRecords,
+        tenantId,
+        req.user!.id
+      );
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Bulk attendance error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Timetable Routes ============
+  app.get('/api/timetable', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { classId } = req.query;
+      
+      if (!classId) {
+        return res.status(400).json({ error: 'classId is required' });
+      }
+
+      const timetable = await storage.getTimetableByClass(classId as string, tenantId);
+      res.json({ timetable });
+    } catch (error) {
+      console.error('Get timetable error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
