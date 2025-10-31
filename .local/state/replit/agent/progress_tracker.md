@@ -77,3 +77,10 @@
 [x] 77. Implemented proper cache invalidation for real-time UI updates after mutations
 [x] 78. Architect reviewed and approved - feature is production-ready with comprehensive validation
 [x] 79. Application restarted successfully - timetable management fully functional
+[x] 80. October 31, 2025 - Fixed teacher dropdown and added principal role to exam creation
+[x] 81. Fixed teacher selection dropdown in timetable form - changed from non-existent /api/users endpoint to correct /api/faculty endpoint
+[x] 82. Updated response type mapping from { users: Teacher[] } to { faculty: Teacher[] } to match API response
+[x] 83. Added principal role to exam creation permissions - updated requireRole(['admin', 'super_admin']) to include 'principal'
+[x] 84. Architect reviewed and approved - both fixes align with existing RBAC patterns, no security issues
+[x] 85. Teachers now display correctly in timetable form dropdown
+[x] 86. Principals can now create exams alongside admins and super admins
