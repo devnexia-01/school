@@ -83,11 +83,25 @@ const timetableSchema = z.object({
   classId: z.string().min(1, 'Class is required'),
   subjectId: z.string().min(1, 'Subject is required'),
   teacherId: z.string().min(1, 'Teacher is required'),
-  dayOfWeek: z.string().min(1, 'Day is required'),
-  startTime: z.string().min(1, 'Start time is required'),
-  endTime: z.string().min(1, 'End time is required'),
+  dayOfWeek: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'], {
+    errorMap: () => ({ message: 'Please select a valid day of the week' }),
+  }),
+  startTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Start time must be in HH:MM format'),
+  endTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'End time must be in HH:MM format'),
   roomNumber: z.string().optional(),
-  academicYear: z.string().min(1, 'Academic year is required'),
+  academicYear: z.string().min(4, 'Academic year is required'),
+}).refine((data) => {
+  if (data.startTime && data.endTime) {
+    const [startHour, startMin] = data.startTime.split(':').map(Number);
+    const [endHour, endMin] = data.endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    return startMinutes < endMinutes;
+  }
+  return true;
+}, {
+  message: 'End time must be after start time',
+  path: ['endTime'],
 });
 
 type TimetableFormData = z.infer<typeof timetableSchema>;
@@ -149,7 +163,7 @@ export default function Timetable() {
       classId: '',
       subjectId: '',
       teacherId: '',
-      dayOfWeek: '',
+      dayOfWeek: undefined as any,
       startTime: '',
       endTime: '',
       roomNumber: '',
@@ -169,7 +183,7 @@ export default function Timetable() {
         classId: editingEntry.classId._id,
         subjectId: editingEntry.subjectId._id,
         teacherId: editingEntry.teacherId._id,
-        dayOfWeek: editingEntry.dayOfWeek,
+        dayOfWeek: editingEntry.dayOfWeek as any,
         startTime: editingEntry.startTime,
         endTime: editingEntry.endTime,
         roomNumber: editingEntry.roomNumber || '',
@@ -180,7 +194,7 @@ export default function Timetable() {
         classId: selectedClass,
         subjectId: '',
         teacherId: '',
-        dayOfWeek: '',
+        dayOfWeek: undefined as any,
         startTime: '',
         endTime: '',
         roomNumber: '',
@@ -190,7 +204,11 @@ export default function Timetable() {
   }, [editingEntry, form, selectedClass]);
 
   const createMutation = useMutation({
-    mutationFn: (data: TimetableFormData) => apiRequest('/api/timetable', 'POST', data),
+    mutationFn: (data: TimetableFormData) => 
+      apiRequest('/api/timetable', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
       toast({ title: 'Success', description: 'Timetable entry created successfully' });
@@ -208,7 +226,10 @@ export default function Timetable() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: TimetableFormData }) => 
-      apiRequest(`/api/timetable/${id}`, 'PUT', data),
+      apiRequest(`/api/timetable/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
       toast({ title: 'Success', description: 'Timetable entry updated successfully' });
@@ -226,7 +247,10 @@ export default function Timetable() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/timetable/${id}`, 'DELETE'),
+    mutationFn: (id: string) => 
+      apiRequest(`/api/timetable/${id}`, {
+        method: 'DELETE',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
       toast({ title: 'Success', description: 'Timetable entry deleted successfully' });
@@ -265,7 +289,7 @@ export default function Timetable() {
       classId: selectedClass,
       subjectId: '',
       teacherId: '',
-      dayOfWeek: '',
+      dayOfWeek: undefined as any,
       startTime: '',
       endTime: '',
       roomNumber: '',
