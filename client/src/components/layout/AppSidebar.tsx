@@ -97,7 +97,7 @@ const menuItems: MenuItem[] = [
     title: 'Fee Management',
     icon: IndianRupee,
     path: '/fees',
-    roles: ['admin', 'principal', 'parent'],
+    roles: ['admin', 'principal', 'parent', 'student'],
   },
   {
     title: 'Payroll',
