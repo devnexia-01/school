@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Download, IndianRupee, Eye, FileText } from 'lucide-react';
+import { Plus, Download, IndianRupee, Eye, FileText, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,16 @@ import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp, Users, CreditCard } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Payroll() {
   const { user } = useAuth();
@@ -26,6 +36,17 @@ export default function Payroll() {
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [generatedPayrolls, setGeneratedPayrolls] = useState<any[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPayroll, setSelectedPayroll] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    basicSalary: '',
+    allowances: '',
+    deductions: '',
+    netSalary: '',
+    status: '',
+    remarks: '',
+  });
 
   const canManagePayroll = user && ['admin', 'principal'].includes(user.role);
   const isFaculty = user && user.role === 'faculty';
@@ -90,6 +111,57 @@ export default function Payroll() {
     },
   });
 
+  const editPayrollMutation = useMutation({
+    mutationFn: async (data: { id: string; updateData: any }) => {
+      return await apiRequest(`/api/payroll/${data.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data.updateData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll/my'] });
+      toast({
+        title: 'Success',
+        description: 'Payroll updated successfully',
+      });
+      setIsEditDialogOpen(false);
+      setSelectedPayroll(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update payroll',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deletePayrollMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/payroll/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll/my'] });
+      toast({
+        title: 'Success',
+        description: 'Payroll deleted successfully',
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedPayroll(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete payroll',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleGeneratePayroll = () => {
     if (!generateMonth || !generateYear) {
       toast({
@@ -103,6 +175,50 @@ export default function Payroll() {
       month: generateMonth,
       year: parseInt(generateYear),
     });
+  };
+
+  const handleEditPayroll = (record: any) => {
+    setSelectedPayroll(record);
+    setEditForm({
+      basicSalary: record.basicSalary?.toString() || '',
+      allowances: record.allowances?.toString() || '',
+      deductions: record.deductions?.toString() || '',
+      netSalary: record.netSalary?.toString() || '',
+      status: record.status || 'draft',
+      remarks: record.remarks || '',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!selectedPayroll) return;
+
+    const basicSalary = parseFloat(editForm.basicSalary) || 0;
+    const allowances = parseFloat(editForm.allowances) || 0;
+    const deductions = parseFloat(editForm.deductions) || 0;
+    const netSalary = parseFloat(editForm.netSalary) || 0;
+
+    editPayrollMutation.mutate({
+      id: selectedPayroll._id || selectedPayroll.id,
+      updateData: {
+        basicSalary,
+        allowances,
+        deductions,
+        netSalary,
+        status: editForm.status,
+        remarks: editForm.remarks,
+      },
+    });
+  };
+
+  const handleDeletePayroll = (record: any) => {
+    setSelectedPayroll(record);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!selectedPayroll) return;
+    deletePayrollMutation.mutate(selectedPayroll._id || selectedPayroll.id);
   };
 
   const handleProcessPayment = (record: any) => {
@@ -380,6 +496,26 @@ export default function Payroll() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {canManagePayroll && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditPayroll(item)}
+                            data-testid={`button-edit-payroll-${item._id || item.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePayroll(item)}
+                            data-testid={`button-delete-payroll-${item._id || item.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                       {canManagePayroll && item.status === 'approved' && (
                         <Button
                           variant="outline"
@@ -397,6 +533,114 @@ export default function Payroll() {
             />
           </CardContent>
         </Card>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Payroll</DialogTitle>
+              <DialogDescription>
+                Update payroll details for {selectedPayroll?.employeeName}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-basicSalary">Basic Salary</Label>
+                  <Input
+                    id="edit-basicSalary"
+                    type="number"
+                    value={editForm.basicSalary}
+                    onChange={(e) => setEditForm({ ...editForm, basicSalary: e.target.value })}
+                    data-testid="input-edit-basic-salary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-allowances">Allowances</Label>
+                  <Input
+                    id="edit-allowances"
+                    type="number"
+                    value={editForm.allowances}
+                    onChange={(e) => setEditForm({ ...editForm, allowances: e.target.value })}
+                    data-testid="input-edit-allowances"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-deductions">Deductions</Label>
+                  <Input
+                    id="edit-deductions"
+                    type="number"
+                    value={editForm.deductions}
+                    onChange={(e) => setEditForm({ ...editForm, deductions: e.target.value })}
+                    data-testid="input-edit-deductions"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-netSalary">Net Salary</Label>
+                  <Input
+                    id="edit-netSalary"
+                    type="number"
+                    value={editForm.netSalary}
+                    onChange={(e) => setEditForm({ ...editForm, netSalary: e.target.value })}
+                    data-testid="input-edit-net-salary"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value })}>
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-remarks">Remarks</Label>
+                <Input
+                  id="edit-remarks"
+                  value={editForm.remarks}
+                  onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                  data-testid="input-edit-remarks"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} data-testid="button-cancel-edit">
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={editPayrollMutation.isPending} data-testid="button-save-edit">
+                {editPayrollMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Payroll</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the payroll record for {selectedPayroll?.employeeName}? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-delete"
+              >
+                {deletePayrollMutation.isPending ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

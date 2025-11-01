@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Download, IndianRupee } from 'lucide-react';
+import { Plus, Download, IndianRupee, Search } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/shared/StatCard';
@@ -29,6 +29,8 @@ interface FeePayment {
   status: string;
   date: string;
   receipt: string;
+  admissionNumber?: string;
+  paymentMode?: string;
 }
 
 interface FeeStructure {
@@ -45,6 +47,9 @@ export default function Fees() {
   const { toast } = useToast();
   const isStudent = user?.role === 'student';
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [feeForm, setFeeForm] = useState({
     name: '',
     amount: '',
@@ -54,7 +59,15 @@ export default function Fees() {
     description: '',
   });
 
-  const { data: profileData } = useQuery({
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: profileData } = useQuery<{ student: { _id: string } }>({
     queryKey: ['/api/student/profile'],
     enabled: isStudent,
   });
@@ -66,6 +79,11 @@ export default function Fees() {
     enabled: !isStudent || !!studentId,
   });
 
+  const { data: searchResultsData, isLoading: searchLoading } = useQuery<{ payments: any[] }>({
+    queryKey: ['/api/fee-payments/search', { q: debouncedSearchQuery, status: statusFilter }],
+    enabled: !isStudent && (!!debouncedSearchQuery || !!statusFilter),
+  });
+
   const { data: structuresData, isLoading: structuresLoading } = useQuery<{ feeStructures: FeeStructure[] }>({
     queryKey: ['/api/fee-structures'],
   });
@@ -75,9 +93,12 @@ export default function Fees() {
     enabled: !isStudent,
   });
 
-  const feePayments = paymentsData?.payments || [];
+  const feePayments = !isStudent && (debouncedSearchQuery || statusFilter) 
+    ? (searchResultsData?.payments || [])
+    : (paymentsData?.payments || []);
   const feeStructures = structuresData?.feeStructures || [];
   const classes = classesData?.classes || [];
+  const isLoading = isStudent ? paymentsLoading : (debouncedSearchQuery || statusFilter ? searchLoading : paymentsLoading);
 
   const createFeeStructureMutation = useMutation({
     mutationFn: async () => {
@@ -195,11 +216,41 @@ export default function Fees() {
           <TabsContent value="payments" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>{isStudent ? 'My Payment History' : 'Recent Payments'}</CardTitle>
-                <CardDescription>{isStudent ? 'Your fee payment records' : 'Latest fee payments and pending amounts'}</CardDescription>
+                <div className="flex flex-col space-y-4">
+                  <div>
+                    <CardTitle>{isStudent ? 'My Payment History' : 'Recent Payments'}</CardTitle>
+                    <CardDescription>{isStudent ? 'Your fee payment records' : 'Latest fee payments and pending amounts'}</CardDescription>
+                  </div>
+                  {!isStudent && (
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by student name, admission number, or class..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-10"
+                          data-testid="input-search-fees"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-48" data-testid="select-status-filter">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Statuses</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="overdue">Overdue</SelectItem>
+                          <SelectItem value="partial">Partial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                {paymentsLoading ? (
+                {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading payments...</div>
                 ) : (
                   <DataTable

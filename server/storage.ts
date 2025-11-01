@@ -100,6 +100,7 @@ export interface IStorage {
   getFeePaymentsByStudent(studentId: string, tenantId: string): Promise<FeePayment[]>;
   getFeePaymentsByTenant(tenantId: string, limit?: number): Promise<any[]>;
   createFeePayment(payment: InsertFeePayment): Promise<FeePayment>;
+  searchFeePayments(tenantId: string, query: string, status?: string): Promise<any[]>;
   
   // Announcements
   getAnnouncementsByTenant(tenantId: string): Promise<Announcement[]>;
@@ -467,6 +468,59 @@ export class DatabaseStorage implements IStorage {
   async createFeePayment(insertPayment: InsertFeePayment): Promise<FeePayment> {
     const payment = await FeePaymentModel.create(insertPayment);
     return toPlainObject(payment);
+  }
+
+  async searchFeePayments(tenantId: string, query: string, status?: string): Promise<any[]> {
+    const matchQuery: any = { tenantId };
+    
+    if (status) {
+      matchQuery.status = status;
+    }
+    
+    const payments = await FeePaymentModel.find(matchQuery)
+      .populate('studentId', 'userId admissionNumber')
+      .sort({ paymentDate: -1 })
+      .lean();
+    
+    const paymentsWithDetails = await Promise.all(
+      payments.map(async (payment) => {
+        const student = await StudentModel.findById(payment.studentId)
+          .populate('userId', 'firstName lastName email')
+          .populate('classId', 'name')
+          .lean();
+        
+        const studentName = student ? `${(student.userId as any)?.firstName} ${(student.userId as any)?.lastName}` : 'Unknown';
+        const studentEmail = (student?.userId as any)?.email || '';
+        const admissionNumber = (student as any)?.admissionNumber || '';
+        const className = student ? (student.classId as any)?.name || 'N/A' : 'N/A';
+        
+        if (query) {
+          const searchTerm = query.toLowerCase();
+          if (
+            !studentName.toLowerCase().includes(searchTerm) &&
+            !admissionNumber.toLowerCase().includes(searchTerm) &&
+            !className.toLowerCase().includes(searchTerm) &&
+            !studentEmail.toLowerCase().includes(searchTerm)
+          ) {
+            return null;
+          }
+        }
+        
+        return {
+          id: payment._id.toString(),
+          student: studentName,
+          admissionNumber,
+          class: className,
+          amount: payment.amount,
+          status: payment.status,
+          date: payment.paymentDate.toISOString().split('T')[0],
+          receipt: payment.receiptNumber || '',
+          paymentMode: payment.paymentMode,
+        };
+      })
+    );
+    
+    return paymentsWithDetails.filter(p => p !== null);
   }
 
   // Announcements

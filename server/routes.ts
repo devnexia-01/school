@@ -644,6 +644,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/fee-payments/search', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const query = req.query.q as string || '';
+      const status = req.query.status as string || '';
+      const payments = await storage.searchFeePayments(tenantId, query, status);
+      res.json({ payments });
+    } catch (error) {
+      console.error('Search fee payments error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Announcements Routes ============
   app.get('/api/announcements', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {

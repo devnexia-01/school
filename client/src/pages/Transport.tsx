@@ -354,7 +354,7 @@ export default function Transport() {
                           </div>
                         )}
                         <div className="mt-4 flex items-center justify-between">
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 flex-wrap">
                             <Badge variant={routeItem.active ? 'default' : 'secondary'}>
                               {routeItem.active ? 'Active' : 'Inactive'}
                             </Badge>
