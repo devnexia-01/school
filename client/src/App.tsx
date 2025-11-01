@@ -23,7 +23,7 @@ const LeaveManagement = lazy(() => import("@/pages/LeaveManagement"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Tenants = lazy(() => import("@/pages/Tenants"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
-const ProfileSettings = lazy(() => import("@/pages/ProfileSettings"));
+const Profile = lazy(() => import("@/pages/Profile"));
 const Preferences = lazy(() => import("@/pages/Preferences"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -129,7 +129,7 @@ function Router() {
         <ProtectedRoute component={SupportTickets} />
       </Route>
       <Route path="/profile">
-        <ProtectedRoute component={ProfileSettings} />
+        <ProtectedRoute component={Profile} />
       </Route>
       <Route path="/preferences">
         <ProtectedRoute component={Preferences} />

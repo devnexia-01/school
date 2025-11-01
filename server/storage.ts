@@ -1227,7 +1227,37 @@ export class DatabaseStorage implements IStorage {
     .sort({ routeNumber: 1 })
     .lean();
     
-    return routes.map(toPlainObject);
+    // For each route, get student count and preview (first 5 students)
+    const routesWithStudents = await Promise.all(
+      routes.map(async (route) => {
+        const assignments = await StudentTransportModel.find({
+          tenantId,
+          routeId: route._id
+        })
+        .populate('studentId', 'firstName lastName admissionNumber')
+        .limit(5)
+        .lean();
+        
+        const totalCount = await StudentTransportModel.countDocuments({
+          tenantId,
+          routeId: route._id
+        });
+        
+        return {
+          ...toPlainObject(route),
+          studentPreview: assignments.map(a => ({
+            _id: a._id,
+            firstName: (a.studentId as any)?.firstName,
+            lastName: (a.studentId as any)?.lastName,
+            admissionNumber: (a.studentId as any)?.admissionNumber,
+            pickupStop: a.pickupStop,
+          })),
+          studentCount: totalCount
+        };
+      })
+    );
+    
+    return routesWithStudents;
   }
   
   async createTransportRoute(route: any): Promise<any> {

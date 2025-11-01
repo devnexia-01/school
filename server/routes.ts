@@ -1043,8 +1043,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
       
+      // Get transport details
+      const transport = await storage.getStudentTransportDetails(student._id, tenantId);
+      
+      // Get fee summary
+      const feeClass = await storage.getClass(student.classId, tenantId);
+      const feeStructures = await storage.getFeeStructuresByTenant(tenantId);
+      const classFeeStructures = feeStructures.filter((fs: any) => fs.classId === student.classId);
+      const totalFees = classFeeStructures.reduce((sum: number, fs: any) => sum + (fs.amount || 0), 0);
+      
+      const feePayments = await storage.getFeePaymentsByStudent(student._id, tenantId);
+      const paidAmount = feePayments
+        .filter((fp: any) => fp.status === 'paid')
+        .reduce((sum: number, fp: any) => sum + (fp.amount || 0), 0);
+      const pendingAmount = totalFees - paidAmount;
+      
+      // Get recent 5 payments
+      const recentPayments = feePayments
+        .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime())
+        .slice(0, 5);
+      
       const { password, ...userWithoutPassword } = user;
-      res.json({ student, user: userWithoutPassword });
+      res.json({ 
+        student, 
+        user: userWithoutPassword,
+        transport: transport ? {
+          routeName: transport.routeId?.routeName,
+          routeNumber: transport.routeId?.routeNumber,
+          vehicleNumber: transport.routeId?.vehicleNumber,
+          pickupStop: transport.pickupStop,
+          dropStop: transport.dropStop,
+          fare: transport.routeId?.fare
+        } : null,
+        fees: {
+          totalFees,
+          paidAmount,
+          pendingAmount,
+          recentPayments: recentPayments.map((fp: any) => ({
+            _id: fp._id,
+            amount: fp.amount,
+            paymentDate: fp.paymentDate,
+            paymentMode: fp.paymentMode,
+            status: fp.status,
+            receiptNumber: fp.receiptNumber,
+            remarks: fp.remarks
+          }))
+        }
+      });
     } catch (error) {
       console.error('Get student profile error:', error);
       res.status(500).json({ error: 'Internal server error' });

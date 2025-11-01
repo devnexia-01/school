@@ -324,12 +324,12 @@ export default function Transport() {
               ) : (
                 <div className="space-y-4">
                   {routes.map((routeItem: any, index: number) => (
-                    <Card key={routeItem._id || index}>
+                    <Card key={routeItem._id || index} data-testid={`card-route-${routeItem._id}`}>
                       <CardContent className="pt-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Route Info</p>
-                            <p className="font-semibold">{routeItem.routeName}</p>
+                            <p className="font-semibold" data-testid={`text-route-name-${routeItem._id}`}>{routeItem.routeName}</p>
                             <p className="text-sm text-muted-foreground">Route #{routeItem.routeNumber}</p>
                           </div>
                           <div>
@@ -353,6 +353,65 @@ export default function Transport() {
                             </div>
                           </div>
                         )}
+                        
+                        {/* Student Preview Section */}
+                        <div className="mt-4 border-t pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">Assigned Students</span>
+                              <Badge variant="secondary" data-testid={`badge-student-count-${routeItem._id}`}>
+                                {routeItem.studentCount || 0} {routeItem.studentCount === 1 ? 'Student' : 'Students'}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {routeItem.studentPreview && routeItem.studentPreview.length > 0 ? (
+                            <div className="space-y-2">
+                              {routeItem.studentPreview.slice(0, 5).map((student: any, idx: number) => (
+                                <div 
+                                  key={student._id || idx}
+                                  className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm"
+                                  data-testid={`preview-student-${student._id}`}
+                                >
+                                  <div>
+                                    <span className="font-medium">
+                                      {student.firstName} {student.lastName}
+                                    </span>
+                                    <span className="text-muted-foreground ml-2">
+                                      ({student.admissionNumber})
+                                    </span>
+                                  </div>
+                                  {student.pickupStop && (
+                                    <span className="text-xs text-muted-foreground">
+                                      <MapPin className="inline h-3 w-3 mr-1" />
+                                      {student.pickupStop}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                              {routeItem.studentCount > 5 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => {
+                                    setSelectedRouteId(routeItem._id);
+                                    setIsManageStudentsDialogOpen(true);
+                                  }}
+                                  data-testid={`button-view-all-students-${routeItem._id}`}
+                                >
+                                  View All {routeItem.studentCount} Students
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground" data-testid={`text-no-students-${routeItem._id}`}>
+                              No students assigned to this route
+                            </p>
+                          )}
+                        </div>
+                        
                         <div className="mt-4 flex items-center justify-between">
                           <div className="flex items-center gap-4 flex-wrap">
                             <Badge variant={routeItem.active ? 'default' : 'secondary'}>
