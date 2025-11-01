@@ -42,9 +42,13 @@ export default function Communication() {
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        ...announcementForm,
+        targetRole: announcementForm.targetRole || undefined,
+      };
       return await apiRequest('/api/announcements', {
         method: 'POST',
-        body: JSON.stringify(announcementForm),
+        body: JSON.stringify(payload),
       });
     },
     onSuccess: () => {
@@ -329,13 +333,22 @@ export default function Communication() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="announcement-target">Target Role (Optional)</Label>
-              <Input
-                id="announcement-target"
-                placeholder="e.g., student, faculty"
-                value={announcementForm.targetRole}
-                onChange={(e) => setAnnouncementForm({ ...announcementForm, targetRole: e.target.value })}
-                data-testid="input-announcement-target"
-              />
+              <Select 
+                value={announcementForm.targetRole} 
+                onValueChange={(value) => setAnnouncementForm({ ...announcementForm, targetRole: value })}
+              >
+                <SelectTrigger data-testid="select-announcement-target">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All roles</SelectItem>
+                  <SelectItem value="student">Students</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                  <SelectItem value="admin">Admins</SelectItem>
+                  <SelectItem value="principal">Principals</SelectItem>
+                  <SelectItem value="parent">Parents</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

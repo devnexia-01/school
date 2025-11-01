@@ -206,3 +206,10 @@
 [x] 206. All migration tasks completed - School ERP fully operational in Replit environment
 [x] 207. Project ready for development and production use - November 01, 2025
 [x] 208. Migration successfully completed - All items marked as done in progress tracker
+[x] 209. November 01, 2025 - Fixed announcement creation failure bug
+[x] 210. Root cause: targetRole field was being sent as empty string "" instead of undefined
+[x] 211. Solution 1: Modified mutation to convert empty string to undefined before sending to API
+[x] 212. Solution 2: Changed targetRole input from text field to Select dropdown with valid role options
+[x] 213. Added role options: All roles, Students, Faculty, Admins, Principals, Parents
+[x] 214. Application restarted successfully via HMR - announcement creation now working
+[x] 215. Users can now create announcements without errors
