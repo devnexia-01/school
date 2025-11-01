@@ -14,6 +14,69 @@ import { useQuery } from '@tanstack/react-query';
 export default function Reports() {
   const { user } = useAuth();
 
+  const exportReport = () => {
+    const csvData = [];
+    
+    csvData.push(['School ERP - Comprehensive Report']);
+    csvData.push(['']);
+    csvData.push(['Overview Statistics']);
+    csvData.push(['Metric', 'Value']);
+    csvData.push(['Total Students', stats?.totalStudents || 0]);
+    csvData.push(['Faculty Members', stats?.totalFaculty || 0]);
+    csvData.push(['Monthly Revenue', stats?.monthlyRevenue || 0]);
+    csvData.push(['Pending Fees', stats?.pendingFees || 0]);
+    csvData.push(['']);
+    
+    if (attendanceData.length > 0) {
+      csvData.push(['Attendance Trends']);
+      csvData.push(['Month', 'Present %', 'Absent %']);
+      attendanceData.forEach((row: any) => {
+        csvData.push([row.month, row.present, row.absent]);
+      });
+      csvData.push(['']);
+    }
+    
+    if (performanceData.length > 0) {
+      csvData.push(['Academic Performance']);
+      csvData.push(['Subject', 'Average Score']);
+      performanceData.forEach((row: any) => {
+        csvData.push([row.subject, row.average]);
+      });
+      csvData.push(['']);
+    }
+    
+    if (classDistribution.length > 0) {
+      csvData.push(['Class Distribution']);
+      csvData.push(['Grade', 'Students']);
+      classDistribution.forEach((row: any) => {
+        csvData.push([row.name, row.value]);
+      });
+      csvData.push(['']);
+    }
+    
+    if (feeCollectionData.length > 0) {
+      csvData.push(['Fee Collection Trends']);
+      csvData.push(['Month', 'Collected', 'Pending']);
+      feeCollectionData.forEach((row: any) => {
+        csvData.push([row.month, row.collected, row.pending]);
+      });
+      csvData.push(['']);
+      csvData.push(['Fee Summary']);
+      csvData.push(['Total Revenue', feeStats.totalRevenue]);
+      csvData.push(['Collected', feeStats.collected]);
+      csvData.push(['Pending', feeStats.pending]);
+    }
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `school-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const { data: stats } = useQuery<{
     totalStudents: number;
     totalFaculty: number;
@@ -77,7 +140,7 @@ export default function Reports() {
                 <SelectItem value="2022-2023">2022-2023</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" data-testid="button-export-report">
+            <Button variant="outline" onClick={exportReport} data-testid="button-export-report">
               <Download className="mr-2 h-4 w-4" />
               Export Report
             </Button>

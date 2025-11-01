@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bus, MapPin, Clock, Phone, User, IndianRupee, Plus } from 'lucide-react';
+import { Bus, MapPin, Clock, Phone, User, IndianRupee, Plus, Users, X } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Transport() {
   const { user } = useAuth();
@@ -23,6 +24,13 @@ export default function Transport() {
   const canViewTransport = user && ['admin', 'principal', 'student'].includes(user.role);
   const canManageTransport = user && ['admin', 'principal'].includes(user.role);
   const [isAddRouteDialogOpen, setIsAddRouteDialogOpen] = useState(false);
+  const [isManageStudentsDialogOpen, setIsManageStudentsDialogOpen] = useState(false);
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [assignmentForm, setAssignmentForm] = useState({
+    pickupStop: '',
+    dropStop: '',
+  });
   const [routeForm, setRouteForm] = useState({
     routeName: '',
     routeNumber: '',
@@ -42,6 +50,74 @@ export default function Transport() {
   const transport = transportData?.transport;
   const routes = transportData?.routes || [];
   const route = transport?.routeId;
+
+  const { data: studentsData } = useQuery<{ students: any[] }>({
+    queryKey: ['/api/students'],
+    enabled: !!canManageTransport && isManageStudentsDialogOpen,
+  });
+
+  const { data: routeStudentsData, refetch: refetchRouteStudents } = useQuery<{ students: any[] }>({
+    queryKey: [`/api/transport/assignments/${selectedRouteId}`],
+    enabled: !!selectedRouteId && isManageStudentsDialogOpen,
+  });
+
+  const allStudents = (studentsData?.students as any[]) || [];
+  const routeStudents = (routeStudentsData?.students as any[]) || [];
+
+  const assignStudentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedStudentId || !selectedRouteId) {
+        throw new Error('Please select a student');
+      }
+      return await apiRequest('/api/transport/assignments', {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId: selectedStudentId,
+          routeId: selectedRouteId,
+          pickupStop: assignmentForm.pickupStop,
+          dropStop: assignmentForm.dropStop,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Student assigned to route successfully',
+      });
+      refetchRouteStudents();
+      setSelectedStudentId('');
+      setAssignmentForm({ pickupStop: '', dropStop: '' });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to assign student',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const removeStudentMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      return await apiRequest(`/api/transport/assignments/${assignmentId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Student removed from route successfully',
+      });
+      refetchRouteStudents();
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove student',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const createRouteMutation = useMutation({
     mutationFn: async () => {
@@ -277,12 +353,28 @@ export default function Transport() {
                             </div>
                           </div>
                         )}
-                        <div className="mt-4 flex items-center gap-4">
-                          <Badge variant={routeItem.active ? 'default' : 'secondary'}>
-                            {routeItem.active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          {routeItem.fare && (
-                            <span className="text-sm font-medium">{formatCurrencyINR(routeItem.fare)}/month</span>
+                        <div className="mt-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Badge variant={routeItem.active ? 'default' : 'secondary'}>
+                              {routeItem.active ? 'Active' : 'Inactive'}
+                            </Badge>
+                            {routeItem.fare && (
+                              <span className="text-sm font-medium">{formatCurrencyINR(routeItem.fare)}/month</span>
+                            )}
+                          </div>
+                          {canManageTransport && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRouteId(routeItem._id);
+                                setIsManageStudentsDialogOpen(true);
+                              }}
+                              data-testid={`button-manage-students-${routeItem._id}`}
+                            >
+                              <Users className="mr-2 h-4 w-4" />
+                              Manage Students
+                            </Button>
                           )}
                         </div>
                       </CardContent>
@@ -292,6 +384,110 @@ export default function Transport() {
               )}
             </CardContent>
           </Card>
+
+          <Dialog open={isManageStudentsDialogOpen} onOpenChange={setIsManageStudentsDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Manage Route Students</DialogTitle>
+                <DialogDescription>
+                  Assign students to this route or remove existing assignments
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                <div className="space-y-3">
+                  <Label className="font-semibold">Assigned Students</Label>
+                  {routeStudents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No students assigned to this route</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {routeStudents.map((assignment: any) => (
+                        <div
+                          key={assignment._id}
+                          className="flex items-center justify-between p-3 border rounded-lg"
+                          data-testid={`assignment-${assignment._id}`}
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {assignment.studentId?.firstName} {assignment.studentId?.lastName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Admission: {assignment.studentId?.admissionNumber}
+                            </p>
+                            {assignment.pickupStop && (
+                              <p className="text-sm text-muted-foreground">
+                                Pickup: {assignment.pickupStop}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeStudentMutation.mutate(assignment._id)}
+                            disabled={removeStudentMutation.isPending}
+                            data-testid={`button-remove-${assignment._id}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t pt-4 space-y-4">
+                  <Label className="font-semibold">Add Student to Route</Label>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="student-select">Select Student</Label>
+                      <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                        <SelectTrigger data-testid="select-student">
+                          <SelectValue placeholder="Choose a student" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allStudents
+                            .filter((student: any) => !routeStudents.some((rs: any) => rs.studentId?._id === student.id))
+                            .map((student: any) => (
+                              <SelectItem key={student.id} value={student.id}>
+                                {student.name} - {student.admissionNumber}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="pickup-stop">Pickup Stop (Optional)</Label>
+                      <Input
+                        id="pickup-stop"
+                        placeholder="Enter pickup stop"
+                        value={assignmentForm.pickupStop}
+                        onChange={(e) => setAssignmentForm({ ...assignmentForm, pickupStop: e.target.value })}
+                        data-testid="input-pickup-stop"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="drop-stop">Drop Stop (Optional)</Label>
+                      <Input
+                        id="drop-stop"
+                        placeholder="Enter drop stop"
+                        value={assignmentForm.dropStop}
+                        onChange={(e) => setAssignmentForm({ ...assignmentForm, dropStop: e.target.value })}
+                        data-testid="input-drop-stop"
+                      />
+                    </div>
+                    <Button
+                      onClick={() => assignStudentMutation.mutate()}
+                      disabled={!selectedStudentId || assignStudentMutation.isPending}
+                      className="w-full"
+                      data-testid="button-assign-student"
+                    >
+                      {assignStudentMutation.isPending ? 'Assigning...' : 'Assign Student'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </AppLayout>
     );

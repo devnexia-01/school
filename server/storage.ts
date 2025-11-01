@@ -156,6 +156,9 @@ export interface IStorage {
   // Transport Management
   getAllTransportRoutes(tenantId: string): Promise<any[]>;
   createTransportRoute(route: any): Promise<any>;
+  createStudentTransport(assignment: any): Promise<any>;
+  deleteStudentTransport(assignmentId: string, tenantId: string): Promise<void>;
+  getRouteStudents(routeId: string, tenantId: string): Promise<any[]>;
   
   // Timetable Management
   getTimetableByClass(classId: string, tenantId: string): Promise<any[]>;
@@ -170,6 +173,7 @@ export interface IStorage {
   getPayrollByTenant(tenantId: string, month?: string, year?: number): Promise<any[]>;
   createPayroll(payroll: Partial<Payroll>): Promise<Payroll>;
   updatePayroll(payrollId: string, tenantId: string, payrollData: Partial<Payroll>): Promise<Payroll>;
+  deletePayroll(payrollId: string, tenantId: string): Promise<void>;
   
   // Leave Management
   getLeaveRequestsByUser(userId: string, tenantId: string): Promise<LeaveRequest[]>;
@@ -1177,6 +1181,43 @@ export class DatabaseStorage implements IStorage {
     return toPlainObject(newRoute.toObject());
   }
   
+  async createStudentTransport(assignment: any): Promise<any> {
+    const existing = await StudentTransportModel.findOne({
+      tenantId: assignment.tenantId,
+      studentId: assignment.studentId
+    });
+    
+    if (existing) {
+      const updated = await StudentTransportModel.findOneAndUpdate(
+        { tenantId: assignment.tenantId, studentId: assignment.studentId },
+        assignment,
+        { new: true }
+      ).lean();
+      return toPlainObject(updated);
+    }
+    
+    const newAssignment = await StudentTransportModel.create(assignment);
+    return toPlainObject(newAssignment.toObject());
+  }
+  
+  async deleteStudentTransport(assignmentId: string, tenantId: string): Promise<void> {
+    await StudentTransportModel.findOneAndDelete({
+      _id: assignmentId,
+      tenantId
+    });
+  }
+  
+  async getRouteStudents(routeId: string, tenantId: string): Promise<any[]> {
+    const assignments = await StudentTransportModel.find({
+      tenantId,
+      routeId
+    })
+    .populate('studentId', 'firstName lastName admissionNumber')
+    .lean();
+    
+    return assignments.map(toPlainObject);
+  }
+  
   // Payroll Management
   async getPayrollByUser(userId: string, tenantId: string): Promise<Payroll[]> {
     const payrolls = await PayrollModel.find({
@@ -1219,6 +1260,13 @@ export class DatabaseStorage implements IStorage {
     }
     
     return toPlainObject(payroll);
+  }
+  
+  async deletePayroll(payrollId: string, tenantId: string): Promise<void> {
+    await PayrollModel.findOneAndDelete({
+      _id: payrollId,
+      tenantId
+    });
   }
   
   // Leave Management

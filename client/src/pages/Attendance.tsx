@@ -61,7 +61,7 @@ export default function Attendance() {
   });
 
   const { data: existingAttendanceData } = useQuery<{ attendance: AttendanceRecord[] }>({
-    queryKey: ['/api/attendance', selectedClass, format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: [`/api/attendance?classId=${selectedClass}&date=${format(selectedDate, 'yyyy-MM-dd')}`],
     enabled: !!selectedClass,
   });
 
@@ -120,7 +120,7 @@ export default function Attendance() {
         title: 'Success',
         description: 'Attendance saved successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/attendance?classId=${selectedClass}&date=${format(selectedDate, 'yyyy-MM-dd')}`] });
     },
     onError: () => {
       toast({

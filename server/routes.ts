@@ -961,6 +961,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/transport/assignments', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { studentId, routeId, pickupStop, dropStop } = req.body;
+      
+      const student = await storage.getStudent(studentId);
+      if (!student || student.tenantId !== tenantId) {
+        return res.status(403).json({ error: 'Access denied: Student not in your tenant' });
+      }
+      
+      const assignmentData = {
+        tenantId,
+        studentId,
+        routeId,
+        pickupStop,
+        dropStop,
+        active: true,
+        createdAt: new Date(),
+      };
+      
+      const assignment = await storage.createStudentTransport(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Create transport assignment error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/transport/assignments/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      
+      await storage.deleteStudentTransport(id, tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete transport assignment error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/transport/assignments/:routeId', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { routeId } = req.params;
+      
+      const students = await storage.getRouteStudents(routeId, tenantId);
+      res.json({ students });
+    } catch (error) {
+      console.error('Get route students error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/student/profile', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -1045,6 +1099,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payroll);
     } catch (error) {
       console.error('Update payroll error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/payroll/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      
+      await storage.deletePayroll(id, tenantId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete payroll error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
