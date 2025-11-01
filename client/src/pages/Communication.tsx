@@ -334,14 +334,13 @@ export default function Communication() {
             <div className="space-y-2">
               <Label htmlFor="announcement-target">Target Role (Optional)</Label>
               <Select 
-                value={announcementForm.targetRole} 
+                value={announcementForm.targetRole || undefined} 
                 onValueChange={(value) => setAnnouncementForm({ ...announcementForm, targetRole: value })}
               >
                 <SelectTrigger data-testid="select-announcement-target">
                   <SelectValue placeholder="All roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All roles</SelectItem>
                   <SelectItem value="student">Students</SelectItem>
                   <SelectItem value="faculty">Faculty</SelectItem>
                   <SelectItem value="admin">Admins</SelectItem>

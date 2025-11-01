@@ -213,3 +213,9 @@
 [x] 213. Added role options: All roles, Students, Faculty, Admins, Principals, Parents
 [x] 214. Application restarted successfully via HMR - announcement creation now working
 [x] 215. Users can now create announcements without errors
+[x] 216. November 01, 2025 - Fixed Radix UI Select empty string value error
+[x] 217. Root cause: SelectItem with empty string value not allowed by Radix UI
+[x] 218. Solution: Removed "All roles" SelectItem option, using placeholder instead
+[x] 219. Changed Select value to use `|| undefined` to properly handle empty state
+[x] 220. Application restarted successfully via HMR - no more console errors
+[x] 221. Announcement creation form now fully functional without any errors
