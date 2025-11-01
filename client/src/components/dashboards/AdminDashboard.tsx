@@ -7,8 +7,10 @@ import { GraduationCap, Users, IndianRupee, AlertCircle, Plus, ClipboardCheck, S
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { formatCurrencyINR } from '@/lib/utils';
+import { useLocation } from 'wouter';
 
 export function AdminDashboard() {
+  const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useQuery<{
     totalStudents: number;
     totalFaculty: number;
@@ -69,19 +71,19 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Button className="w-full justify-start gap-2" data-testid="button-add-student">
+        <Button className="w-full justify-start gap-2" onClick={() => setLocation('/students/add')} data-testid="button-add-student">
           <Plus className="h-4 w-4" />
           Add Student
         </Button>
-        <Button className="w-full justify-start gap-2" variant="outline" data-testid="button-mark-attendance">
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => setLocation('/attendance')} data-testid="button-mark-attendance">
           <ClipboardCheck className="h-4 w-4" />
           Mark Attendance
         </Button>
-        <Button className="w-full justify-start gap-2" variant="outline" data-testid="button-process-payroll">
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => setLocation('/payroll')} data-testid="button-process-payroll">
           <Briefcase className="h-4 w-4" />
           Process Payroll
         </Button>
-        <Button className="w-full justify-start gap-2" variant="outline" data-testid="button-send-announcement">
+        <Button className="w-full justify-start gap-2" variant="outline" onClick={() => setLocation('/communication')} data-testid="button-send-announcement">
           <Send className="h-4 w-4" />
           Send Announcement
         </Button>

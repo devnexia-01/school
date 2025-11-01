@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, startTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
@@ -10,16 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Search, Download, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth';
 
 export default function Students() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{ students: any[]; total?: number }>({
     queryKey: ['/api/students'],
   });
 
@@ -31,7 +32,7 @@ export default function Students() {
   
   const canAddStudent = user && ['admin', 'principal'].includes(user.role);
   
-  const filteredStudents = allStudents.filter(student => {
+  const filteredStudents = allStudents.filter((student: any) => {
     const matchesSearch = searchQuery === '' || 
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -108,12 +109,12 @@ export default function Students() {
                 {
                   key: 'student',
                   header: 'Student',
-                  cell: (item) => (
+                  cell: (item: any) => (
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={item.avatar} />
                         <AvatarFallback>
-                          {item.name.split(' ').map(n => n[0]).join('')}
+                          {item.name.split(' ').map((n: string) => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -126,7 +127,7 @@ export default function Students() {
                 {
                   key: 'class',
                   header: 'Class & Roll',
-                  cell: (item) => (
+                  cell: (item: any) => (
                     <div>
                       <p className="font-medium">{item.class}</p>
                       <p className="text-sm text-muted-foreground">Roll No: {item.rollNumber}</p>
@@ -136,7 +137,7 @@ export default function Students() {
                 {
                   key: 'contact',
                   header: 'Contact',
-                  cell: (item) => (
+                  cell: (item: any) => (
                     <div>
                       <p className="text-sm">{item.email}</p>
                       <p className="text-sm text-muted-foreground">{item.phone}</p>
@@ -146,7 +147,7 @@ export default function Students() {
                 {
                   key: 'status',
                   header: 'Status',
-                  cell: (item) => (
+                  cell: (item: any) => (
                     <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
                       {item.status}
                     </Badge>
@@ -155,18 +156,21 @@ export default function Students() {
                 {
                   key: 'actions',
                   header: 'Actions',
-                  cell: (item) => (
+                  cell: (item: any) => (
                     <div className="flex items-center gap-2">
                       <Link href={`/students/${item.id}`}>
                         <Button variant="ghost" size="sm" data-testid={`button-view-${item.id}`}>
                           View
                         </Button>
                       </Link>
-                      <Link href={`/students/${item.id}/edit`}>
-                        <Button variant="ghost" size="sm" data-testid={`button-edit-${item.id}`}>
-                          Edit
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => startTransition(() => setLocation(`/students/${item.id}/edit`))}
+                        data-testid={`button-edit-${item.id}`}
+                      >
+                        Edit
+                      </Button>
                     </div>
                   ),
                 },

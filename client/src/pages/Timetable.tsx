@@ -80,9 +80,9 @@ const COLORS = [
 ];
 
 const timetableSchema = z.object({
-  className: z.string().min(1, 'Class name is required'),
-  subjectName: z.string().min(1, 'Subject name is required'),
-  teacherName: z.string().min(1, 'Teacher name is required'),
+  classId: z.string().min(1, 'Class is required'),
+  subjectId: z.string().min(1, 'Subject is required'),
+  teacherId: z.string().min(1, 'Teacher is required'),
   dayOfWeek: z.string().min(1, 'Day of week is required'),
   startTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Start time must be in HH:MM format'),
   endTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'End time must be in HH:MM format'),
@@ -158,9 +158,9 @@ export default function Timetable() {
   const form = useForm<TimetableFormData>({
     resolver: zodResolver(timetableSchema),
     defaultValues: {
-      className: '',
-      subjectName: '',
-      teacherName: '',
+      classId: '',
+      subjectId: '',
+      teacherId: '',
       dayOfWeek: '',
       startTime: '',
       endTime: '',
@@ -178,9 +178,9 @@ export default function Timetable() {
   useEffect(() => {
     if (editingEntry) {
       form.reset({
-        className: `${editingEntry.classId.name}`,
-        subjectName: editingEntry.subjectId.name,
-        teacherName: `${editingEntry.teacherId.firstName} ${editingEntry.teacherId.lastName}`,
+        classId: editingEntry.classId._id,
+        subjectId: editingEntry.subjectId._id,
+        teacherId: editingEntry.teacherId._id,
         dayOfWeek: editingEntry.dayOfWeek,
         startTime: editingEntry.startTime,
         endTime: editingEntry.endTime,
@@ -189,9 +189,9 @@ export default function Timetable() {
       });
     } else {
       form.reset({
-        className: '',
-        subjectName: '',
-        teacherName: '',
+        classId: '',
+        subjectId: '',
+        teacherId: '',
         dayOfWeek: '',
         startTime: '',
         endTime: '',
@@ -284,9 +284,9 @@ export default function Timetable() {
   const handleAddNew = () => {
     setEditingEntry(null);
     form.reset({
-      className: '',
-      subjectName: '',
-      teacherName: '',
+      classId: '',
+      subjectId: '',
+      teacherId: '',
       dayOfWeek: '',
       startTime: '',
       endTime: '',
@@ -355,13 +355,24 @@ export default function Timetable() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                           <FormField
                             control={form.control}
-                            name="className"
+                            name="classId"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Class</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Class 10 A" {...field} data-testid="input-class-name" />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="input-class-name">
+                                      <SelectValue placeholder="Select a class" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {classes.map((cls) => (
+                                      <SelectItem key={cls._id} value={cls._id}>
+                                        Class {cls.grade} {cls.section}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -369,13 +380,24 @@ export default function Timetable() {
 
                           <FormField
                             control={form.control}
-                            name="subjectName"
+                            name="subjectId"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Subject</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Mathematics" {...field} data-testid="input-subject-name" />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="input-subject-name">
+                                      <SelectValue placeholder="Select a subject" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {subjects.map((subject) => (
+                                      <SelectItem key={subject._id} value={subject._id}>
+                                        {subject.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -383,13 +405,24 @@ export default function Timetable() {
 
                           <FormField
                             control={form.control}
-                            name="teacherName"
+                            name="teacherId"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Teacher</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., John Smith" {...field} data-testid="input-teacher-name" />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="input-teacher-name">
+                                      <SelectValue placeholder="Select a teacher" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {teachers.map((teacher) => (
+                                      <SelectItem key={teacher._id} value={teacher._id}>
+                                        {teacher.firstName} {teacher.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -401,9 +434,20 @@ export default function Timetable() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Day of Week</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="e.g., Monday" {...field} data-testid="input-day" />
-                                </FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="input-day">
+                                      <SelectValue placeholder="Select a day" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {Object.keys(DAYS_MAP).map((day) => (
+                                      <SelectItem key={day} value={day}>
+                                        {DAYS_MAP[day]}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}

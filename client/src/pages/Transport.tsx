@@ -56,8 +56,8 @@ export default function Transport() {
     enabled: !!canManageTransport && isManageStudentsDialogOpen,
   });
 
-  const { data: routeStudentsData, refetch: refetchRouteStudents } = useQuery<{ students: any[] }>({
-    queryKey: [`/api/transport/assignments/${selectedRouteId}`],
+  const { data: routeStudentsData } = useQuery<{ students: any[] }>({
+    queryKey: ['/api/transport/assignments', selectedRouteId],
     enabled: !!selectedRouteId && isManageStudentsDialogOpen,
   });
 
@@ -80,11 +80,17 @@ export default function Transport() {
       });
     },
     onSuccess: () => {
+      const assignedStudent = allStudents.find((s: any) => s.id === selectedStudentId);
+      const studentName = assignedStudent ? assignedStudent.name : 'Student';
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/transport/assignments', selectedRouteId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      
       toast({
-        title: 'Success',
-        description: 'Student assigned to route successfully',
+        title: 'Student Assigned',
+        description: `${studentName} has been successfully assigned to this route`,
       });
-      refetchRouteStudents();
+      
       setSelectedStudentId('');
       setAssignmentForm({ pickupStop: '', dropStop: '' });
     },
@@ -104,11 +110,13 @@ export default function Transport() {
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/transport/assignments', selectedRouteId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/students'] });
+      
       toast({
         title: 'Success',
         description: 'Student removed from route successfully',
       });
-      refetchRouteStudents();
     },
     onError: () => {
       toast({

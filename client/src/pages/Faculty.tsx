@@ -48,6 +48,7 @@ export default function Faculty() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
 
   const canManageFaculty = user && ['admin', 'principal'].includes(user.role);
@@ -105,7 +106,9 @@ export default function Faculty() {
         title: 'Faculty Updated',
         description: 'Faculty member has been updated successfully.',
       });
+      setIsEditDialogOpen(false);
       setSelectedFaculty(null);
+      form.reset();
     },
     onError: (error: any) => {
       toast({
@@ -147,7 +150,25 @@ export default function Faculty() {
   });
 
   const onSubmit = (data: FacultyFormData) => {
-    addMutation.mutate(data);
+    if (selectedFaculty) {
+      updateMutation.mutate({ id: selectedFaculty.id, data });
+    } else {
+      addMutation.mutate(data);
+    }
+  };
+
+  const handleEditFaculty = (faculty: FacultyMember) => {
+    setSelectedFaculty(faculty);
+    const nameParts = faculty.name.split(' ');
+    form.reset({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email: faculty.email,
+      password: '',
+      phone: faculty.phone || '',
+      role: faculty.role as 'faculty' | 'principal',
+    });
+    setIsEditDialogOpen(true);
   };
 
   const handleDeleteFaculty = (faculty: any) => {
@@ -384,7 +405,7 @@ export default function Faculty() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedFaculty(item)}
+                          onClick={() => handleEditFaculty(item)}
                           data-testid={`button-edit-faculty-${item.id}`}
                         >
                           <Edit2 className="h-4 w-4" />
@@ -406,6 +427,134 @@ export default function Faculty() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setSelectedFaculty(null);
+            form.reset();
+          }
+        }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Faculty Member</DialogTitle>
+              <DialogDescription>Update the details of the faculty member</DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="John" data-testid="input-edit-first-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Doe" data-testid="input-edit-last-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="john.doe@school.com" data-testid="input-edit-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password (Leave blank to keep current)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="password" placeholder="••••••" data-testid="input-edit-password" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="+1-555-0000" data-testid="input-edit-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-edit-role">
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="faculty">Faculty</SelectItem>
+                            <SelectItem value="principal">Principal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditDialogOpen(false);
+                      setSelectedFaculty(null);
+                      form.reset();
+                    }}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    data-testid="button-update-faculty"
+                  >
+                    {updateMutation.isPending ? 'Updating...' : 'Update Faculty'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

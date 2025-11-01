@@ -1,19 +1,33 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Bell, Maximize2, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/lib/auth';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Communication() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const canCreateAnnouncement = user && ['admin', 'principal'].includes(user.role);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    priority: 'normal',
+    targetRole: '',
+  });
 
   const { data: announcementsData, isLoading: announcementsLoading } = useQuery<{ announcements: Array<any> }>({
     queryKey: ['/api/announcements'],
@@ -26,6 +40,48 @@ export default function Communication() {
   const announcements = announcementsData?.announcements || [];
   const messages = messagesData?.messages || [];
 
+  const createAnnouncementMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('/api/announcements', {
+        method: 'POST',
+        body: JSON.stringify(announcementForm),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Announcement created successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+      setIsCreateDialogOpen(false);
+      setAnnouncementForm({
+        title: '',
+        content: '',
+        priority: 'normal',
+        targetRole: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to create announcement',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateAnnouncement = () => {
+    if (!announcementForm.title || !announcementForm.content) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    createAnnouncementMutation.mutate();
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-7xl">
@@ -37,7 +93,7 @@ export default function Communication() {
             <p className="text-muted-foreground mt-1">Announcements and messaging</p>
           </div>
           {canCreateAnnouncement && (
-            <Button data-testid="button-create-announcement">
+            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-announcement">
               <Plus className="mr-2 h-4 w-4" />
               New Announcement
             </Button>
@@ -223,6 +279,77 @@ export default function Communication() {
               <span>{selectedMessage && new Date(selectedMessage.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Announcement Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Announcement</DialogTitle>
+            <DialogDescription>Share important information with your school community</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="announcement-title">Title *</Label>
+              <Input
+                id="announcement-title"
+                placeholder="Enter announcement title"
+                value={announcementForm.title}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                data-testid="input-announcement-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="announcement-content">Content *</Label>
+              <Textarea
+                id="announcement-content"
+                placeholder="Enter announcement details"
+                rows={4}
+                value={announcementForm.content}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+                data-testid="textarea-announcement-content"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="announcement-priority">Priority</Label>
+              <Select 
+                value={announcementForm.priority} 
+                onValueChange={(value) => setAnnouncementForm({ ...announcementForm, priority: value })}
+              >
+                <SelectTrigger data-testid="select-announcement-priority">
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="announcement-target">Target Role (Optional)</Label>
+              <Input
+                id="announcement-target"
+                placeholder="e.g., student, faculty"
+                value={announcementForm.targetRole}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, targetRole: e.target.value })}
+                data-testid="input-announcement-target"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} data-testid="button-cancel-announcement">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateAnnouncement} 
+              disabled={createAnnouncementMutation.isPending}
+              data-testid="button-submit-announcement"
+            >
+              {createAnnouncementMutation.isPending ? 'Creating...' : 'Create Announcement'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>

@@ -49,7 +49,7 @@ export default function Fees() {
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [feeForm, setFeeForm] = useState({
     name: '',
     amount: '',
@@ -81,7 +81,7 @@ export default function Fees() {
 
   const { data: searchResultsData, isLoading: searchLoading } = useQuery<{ payments: any[] }>({
     queryKey: ['/api/fee-payments/search', { q: debouncedSearchQuery, status: statusFilter }],
-    enabled: !isStudent && (!!debouncedSearchQuery || !!statusFilter),
+    enabled: !isStudent && (!!debouncedSearchQuery || (!!statusFilter && statusFilter !== 'all')),
   });
 
   const { data: structuresData, isLoading: structuresLoading } = useQuery<{ feeStructures: FeeStructure[] }>({
@@ -93,12 +93,12 @@ export default function Fees() {
     enabled: !isStudent,
   });
 
-  const feePayments = !isStudent && (debouncedSearchQuery || statusFilter) 
+  const feePayments = !isStudent && (debouncedSearchQuery || (statusFilter && statusFilter !== 'all')) 
     ? (searchResultsData?.payments || [])
     : (paymentsData?.payments || []);
   const feeStructures = structuresData?.feeStructures || [];
   const classes = classesData?.classes || [];
-  const isLoading = isStudent ? paymentsLoading : (debouncedSearchQuery || statusFilter ? searchLoading : paymentsLoading);
+  const isLoading = isStudent ? paymentsLoading : (debouncedSearchQuery || (statusFilter && statusFilter !== 'all') ? searchLoading : paymentsLoading);
 
   const createFeeStructureMutation = useMutation({
     mutationFn: async () => {
@@ -238,7 +238,7 @@ export default function Fees() {
                           <SelectValue placeholder="All Statuses" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Statuses</SelectItem>
+                          <SelectItem value="all">All Statuses</SelectItem>
                           <SelectItem value="paid">Paid</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="overdue">Overdue</SelectItem>

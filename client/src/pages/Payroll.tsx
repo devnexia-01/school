@@ -239,6 +239,27 @@ export default function Payroll() {
   const paidAmount = payrollRecords.filter(r => r.status === 'paid').reduce((sum, record) => sum + record.netSalary, 0);
   const pendingAmount = totalPayroll - paidAmount;
 
+  const handleExportReport = () => {
+    const csvHeaders = 'Employee Name,Month,Year,Basic Salary,Allowances,Deductions,Net Salary,Status\n';
+    const csvRows = payrollRecords.map(record => 
+      `${record.employeeName || 'N/A'},${record.month || 'N/A'},${record.year || 'N/A'},${record.basicSalary},${record.allowances},${record.deductions},${record.netSalary},${record.status}`
+    ).join('\n');
+    
+    const csvContent = csvHeaders + csvRows;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payroll-report-${Date.now()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: 'Success',
+      description: 'Payroll report exported successfully',
+    });
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-7xl">
@@ -250,7 +271,7 @@ export default function Payroll() {
             <p className="text-muted-foreground mt-1">Manage employee salaries and payment processing</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-export-payroll">
+            <Button variant="outline" onClick={handleExportReport} data-testid="button-export-payroll">
               <Download className="mr-2 h-4 w-4" />
               Export Report
             </Button>

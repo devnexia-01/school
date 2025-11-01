@@ -30,13 +30,15 @@ export default function Examinations() {
     endDate: '',
     totalMarks: '100',
     description: '',
+    academicYear: new Date().getFullYear().toString(),
+    published: false,
   });
 
-  const { data: examsData, isLoading: examsLoading } = useQuery({
+  const { data: examsData, isLoading: examsLoading } = useQuery<{ exams: any[] }>({
     queryKey: ['/api/exams'],
   });
 
-  const { data: resultsData, isLoading: resultsLoading } = useQuery({
+  const { data: resultsData, isLoading: resultsLoading } = useQuery<{ results: any[] }>({
     queryKey: isStudent ? ['/api/student/exam-results'] : [],
     enabled: isStudent,
   });
@@ -51,6 +53,8 @@ export default function Examinations() {
         body: JSON.stringify({
           ...examForm,
           totalMarks: parseInt(examForm.totalMarks),
+          academicYear: examForm.academicYear,
+          published: examForm.published,
         }),
       });
     },
@@ -68,6 +72,8 @@ export default function Examinations() {
         endDate: '',
         totalMarks: '100',
         description: '',
+        academicYear: new Date().getFullYear().toString(),
+        published: false,
       });
     },
     onError: () => {
@@ -200,6 +206,17 @@ export default function Examinations() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="academic-year">Academic Year</Label>
+                    <Input
+                      id="academic-year"
+                      type="text"
+                      placeholder="2024-2025"
+                      value={examForm.academicYear}
+                      onChange={(e) => setExamForm({ ...examForm, academicYear: e.target.value })}
+                      data-testid="input-academic-year"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Input
                       id="description"
@@ -262,7 +279,7 @@ export default function Examinations() {
                     {
                       key: 'name',
                       header: 'Exam Name',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium" data-testid={`exam-name-${item._id}`}>
                             {item.name}
@@ -274,7 +291,7 @@ export default function Examinations() {
                     {
                       key: 'dates',
                       header: 'Schedule',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="text-sm">
                             {format(new Date(item.startDate), 'MMM dd, yyyy')}
@@ -288,7 +305,7 @@ export default function Examinations() {
                     {
                       key: 'status',
                       header: 'Status',
-                      cell: (item) => getStatusBadge(item),
+                      cell: (item: any) => getStatusBadge(item),
                     },
                   ]}
                   testId="upcoming-exams-table"
@@ -310,7 +327,7 @@ export default function Examinations() {
                       {
                         key: 'name',
                         header: 'Exam Name',
-                        cell: (item) => (
+                        cell: (item: any) => (
                           <div>
                             <p className="font-medium">{item.name}</p>
                             <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -320,12 +337,12 @@ export default function Examinations() {
                       {
                         key: 'endDate',
                         header: 'Ends On',
-                        cell: (item) => format(new Date(item.endDate), 'MMM dd, yyyy'),
+                        cell: (item: any) => format(new Date(item.endDate), 'MMM dd, yyyy'),
                       },
                       {
                         key: 'status',
                         header: 'Status',
-                        cell: (item) => <Badge>In Progress</Badge>,
+                        cell: (item: any) => <Badge>In Progress</Badge>,
                       },
                     ]}
                     testId="ongoing-exams-table"
@@ -350,7 +367,7 @@ export default function Examinations() {
                     {
                       key: 'name',
                       header: 'Exam Name',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium">{item.name}</p>
                           <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -360,7 +377,7 @@ export default function Examinations() {
                     {
                       key: 'dates',
                       header: 'Dates',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="text-sm">
                             {format(new Date(item.startDate), 'MMM dd, yyyy')}
@@ -374,7 +391,7 @@ export default function Examinations() {
                     {
                       key: 'status',
                       header: 'Status',
-                      cell: (item) => getStatusBadge(item),
+                      cell: (item: any) => getStatusBadge(item),
                     },
                   ]}
                   testId="all-exams-table"
@@ -400,7 +417,7 @@ export default function Examinations() {
                         {
                           key: 'exam',
                           header: 'Exam',
-                          cell: (item) => (
+                          cell: (item: any) => (
                             <div>
                               <p className="font-medium" data-testid={`result-exam-${item._id}`}>
                                 {item.examId?.name || 'Exam'}
@@ -414,7 +431,7 @@ export default function Examinations() {
                         {
                           key: 'marks',
                           header: 'Marks',
-                          cell: (item) => (
+                          cell: (item: any) => (
                             <div>
                               <p className="font-mono font-medium">
                                 {item.marksObtained || 0}/{item.totalMarks || 100}
@@ -432,7 +449,7 @@ export default function Examinations() {
                         {
                           key: 'grade',
                           header: 'Grade',
-                          cell: (item) => (
+                          cell: (item: any) => (
                             <Badge variant="outline" data-testid={`result-grade-${item._id}`}>
                               {item.grade || 'N/A'}
                             </Badge>
@@ -441,7 +458,7 @@ export default function Examinations() {
                         {
                           key: 'date',
                           header: 'Date',
-                          cell: (item) =>
+                          cell: (item: any) =>
                             item.createdAt
                               ? format(new Date(item.createdAt), 'MMM dd, yyyy')
                               : 'N/A',
