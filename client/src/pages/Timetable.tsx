@@ -305,6 +305,95 @@ export default function Timetable() {
 
   const daysToShow = Object.keys(DAYS_MAP).filter(day => groupedByDay[day] && groupedByDay[day].length > 0);
 
+  const isStudent = user?.role === 'student';
+
+  const getUniqueTimeSlots = () => {
+    const times = new Set<string>();
+    timetable.forEach((entry) => {
+      times.add(entry.startTime);
+    });
+    return Array.from(times).sort();
+  };
+
+  const timeSlots = getUniqueTimeSlots();
+  const weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+  const renderStudentGridView = () => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Timetable</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timetable.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">
+              <p className="text-lg font-medium">No timetable data available</p>
+              <p className="text-sm mt-2">Your class timetable has not been set up yet.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse" data-testid="timetable-grid">
+                <thead>
+                  <tr>
+                    <th className="border p-3 bg-muted font-semibold text-left min-w-[100px]">Time</th>
+                    {weekDays.map((day) => (
+                      <th key={day} className="border p-3 bg-muted font-semibold text-center min-w-[150px]">
+                        {DAYS_MAP[day]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeSlots.map((timeSlot) => (
+                    <tr key={timeSlot}>
+                      <td className="border p-3 bg-muted/50 font-medium text-sm">
+                        {formatTime(timeSlot)}
+                      </td>
+                      {weekDays.map((day) => {
+                        const classForSlot = timetable.find(
+                          (entry) => entry.dayOfWeek === day && entry.startTime === timeSlot
+                        );
+                        return (
+                          <td key={`${day}-${timeSlot}`} className="border p-2">
+                            {classForSlot ? (
+                              <div
+                                className="bg-primary/10 rounded-lg p-3 hover:bg-primary/20 transition-colors"
+                                data-testid={`cell-${day}-${timeSlot}`}
+                              >
+                                <p className="font-semibold text-sm mb-1">
+                                  {classForSlot.subjectId?.name || 'Subject'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {classForSlot.teacherId
+                                    ? `${classForSlot.teacherId.firstName} ${classForSlot.teacherId.lastName}`
+                                    : 'Teacher'}
+                                </p>
+                                {classForSlot.roomNumber && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Room: {classForSlot.roomNumber}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {formatTime(classForSlot.startTime)} - {formatTime(classForSlot.endTime)}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground text-xs py-4">-</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-7xl">
@@ -313,12 +402,24 @@ export default function Timetable() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-semibold">Time Table</h1>
-            <p className="text-muted-foreground mt-1">Weekly schedule at a glance</p>
+            <p className="text-muted-foreground mt-1">
+              {isStudent ? 'Your weekly class schedule' : 'Weekly schedule at a glance'}
+            </p>
           </div>
           <Clock className="h-8 w-8 text-muted-foreground" />
         </div>
 
-        {user?.role !== 'student' && (
+        {isStudent ? (
+          isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : (
+            renderStudentGridView()
+          )
+        ) : (
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4 justify-between">
@@ -530,102 +631,104 @@ export default function Timetable() {
           </Card>
         )}
 
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))}
-          </div>
-        ) : timetable.length === 0 ? (
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium">No timetable data available</p>
-                <p className="text-sm mt-2">
-                  {user?.role === 'student' 
-                    ? 'Your class timetable has not been set up yet.'
-                    : canManage 
-                      ? 'Click "Add Entry" to create timetable entries.'
-                      : 'Please select a class or add timetable entries.'}
-                </p>
+        {!isStudent && (
+          <>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-32 w-full" />
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {daysToShow.map((day) => (
-              <Card key={day} className="overflow-hidden">
-                <CardHeader className="bg-muted/50">
-                  <CardTitle className="text-xl">{DAYS_MAP[day]}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-wrap gap-4">
-                    {groupedByDay[day]
-                      .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                      .map((entry, index) => {
-                        const colorClass = COLORS[index % COLORS.length];
-                        const duration = calculateDuration(entry.startTime, entry.endTime);
-                        const timeRange = `${formatTime(entry.startTime)}-${formatTime(entry.endTime)}`;
-
-                        return (
-                          <div
-                            key={entry._id}
-                            className={`${colorClass} text-white rounded-lg p-4 min-w-[200px] flex-1 shadow-md hover:shadow-lg transition-shadow relative group`}
-                            data-testid={`timetable-entry-${entry._id}`}
-                          >
-                            {canManage && (
-                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() => handleEdit(entry)}
-                                  data-testid={`button-edit-${entry._id}`}
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() => handleDelete(entry._id)}
-                                  data-testid={`button-delete-${entry._id}`}
-                                  disabled={deleteMutation.isPending}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                            <div className="space-y-2">
-                              <div className="font-semibold text-sm">{timeRange}</div>
-                              <div className="text-xs opacity-90">{duration}</div>
-                              <div className="font-bold text-base mt-2">
-                                {entry.subjectId?.name || 'Subject'}
-                              </div>
-                              {entry.subjectId?.code && (
-                                <div className="text-xs font-medium opacity-90">
-                                  {entry.subjectId.code}
-                                </div>
-                              )}
-                              {entry.roomNumber && (
-                                <div className="text-xs opacity-90 mt-2">
-                                  {entry.roomNumber}
-                                </div>
-                              )}
-                              {entry.teacherId && (
-                                <div className="text-xs opacity-90 mt-1">
-                                  {entry.teacherId.firstName} {entry.teacherId.lastName}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+            ) : timetable.length === 0 ? (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-lg font-medium">No timetable data available</p>
+                    <p className="text-sm mt-2">
+                      {canManage 
+                        ? 'Click "Add Entry" to create timetable entries.'
+                        : 'Please select a class or add timetable entries.'}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            ) : (
+              <div className="space-y-6">
+                {daysToShow.map((day) => (
+                  <Card key={day} className="overflow-hidden">
+                    <CardHeader className="bg-muted/50">
+                      <CardTitle className="text-xl">{DAYS_MAP[day]}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="flex flex-wrap gap-4">
+                        {groupedByDay[day]
+                          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                          .map((entry, index) => {
+                            const colorClass = COLORS[index % COLORS.length];
+                            const duration = calculateDuration(entry.startTime, entry.endTime);
+                            const timeRange = `${formatTime(entry.startTime)}-${formatTime(entry.endTime)}`;
+
+                            return (
+                              <div
+                                key={entry._id}
+                                className={`${colorClass} text-white rounded-lg p-4 min-w-[200px] flex-1 shadow-md hover:shadow-lg transition-shadow relative group`}
+                                data-testid={`timetable-entry-${entry._id}`}
+                              >
+                                {canManage && (
+                                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => handleEdit(entry)}
+                                      data-testid={`button-edit-${entry._id}`}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => handleDelete(entry._id)}
+                                      data-testid={`button-delete-${entry._id}`}
+                                      disabled={deleteMutation.isPending}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                                <div className="space-y-2">
+                                  <div className="font-semibold text-sm">{timeRange}</div>
+                                  <div className="text-xs opacity-90">{duration}</div>
+                                  <div className="font-bold text-base mt-2">
+                                    {entry.subjectId?.name || 'Subject'}
+                                  </div>
+                                  {entry.subjectId?.code && (
+                                    <div className="text-xs font-medium opacity-90">
+                                      {entry.subjectId.code}
+                                    </div>
+                                  )}
+                                  {entry.roomNumber && (
+                                    <div className="text-xs opacity-90 mt-2">
+                                      {entry.roomNumber}
+                                    </div>
+                                  )}
+                                  {entry.teacherId && (
+                                    <div className="text-xs opacity-90 mt-1">
+                                      {entry.teacherId.firstName} {entry.teacherId.lastName}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </AppLayout>

@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Globe, Save } from 'lucide-react';
+import { Bell, Globe, Save, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLocation } from 'wouter';
 
 export default function Preferences() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: preferences, isLoading } = useQuery<any>({
     queryKey: ['/api/preferences'],
@@ -20,10 +22,8 @@ export default function Preferences() {
 
   const [formData, setFormData] = useState({
     theme: 'system',
-    language: 'en',
     emailNotifications: true,
     pushNotifications: true,
-    timezone: 'UTC',
     dateFormat: 'MM/DD/YYYY',
   });
 
@@ -31,10 +31,8 @@ export default function Preferences() {
     if (preferences) {
       setFormData({
         theme: preferences.theme || 'system',
-        language: preferences.language || 'en',
         emailNotifications: preferences.emailNotifications !== false,
         pushNotifications: preferences.pushNotifications !== false,
-        timezone: preferences.timezone || 'UTC',
         dateFormat: preferences.dateFormat || 'MM/DD/YYYY',
       });
     }
@@ -91,9 +89,19 @@ export default function Preferences() {
       <div className="p-6 max-w-4xl space-y-6">
         <Breadcrumb items={[{ label: 'Preferences' }]} />
         
-        <div>
-          <h1 className="text-3xl font-semibold">Preferences</h1>
-          <p className="text-muted-foreground mt-1">Customize your experience</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold">Preferences</h1>
+            <p className="text-muted-foreground mt-1">Customize your experience</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/dashboard')}
+            data-testid="button-go-back"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
         </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

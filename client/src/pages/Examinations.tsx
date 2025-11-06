@@ -104,6 +104,17 @@ export default function Examinations() {
     (exam: any) => new Date(exam.startDate) <= now && new Date(exam.endDate) >= now
   );
 
+  const testExams = exams.filter((exam: any) => exam.type === 'unit_test' || exam.type === 'practical');
+  const halfYearlyExams = exams.filter((exam: any) => exam.type === 'mid_term');
+  const finalExams = exams.filter((exam: any) => exam.type === 'final');
+
+  const handleDownloadMarksheet = () => {
+    toast({
+      title: 'Coming Soon',
+      description: 'Marksheet download feature will be available soon',
+    });
+  };
+
   const getStatusBadge = (exam: any) => {
     const startDate = new Date(exam.startDate);
     const endDate = new Date(exam.endDate);
@@ -164,8 +175,10 @@ export default function Examinations() {
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="midterm">Mid-Term</SelectItem>
+                        <SelectItem value="test">Test</SelectItem>
+                        <SelectItem value="half_yearly">Half Yearly</SelectItem>
                         <SelectItem value="final">Final</SelectItem>
+                        <SelectItem value="midterm">Mid-Term</SelectItem>
                         <SelectItem value="unit_test">Unit Test</SelectItem>
                         <SelectItem value="practical">Practical</SelectItem>
                         <SelectItem value="assignment">Assignment</SelectItem>
@@ -240,25 +253,32 @@ export default function Examinations() {
           )}
         </div>
 
-        <Tabs defaultValue="upcoming" className="space-y-6">
+        <Tabs defaultValue={isStudent ? "tests" : "upcoming"} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="upcoming" data-testid="tab-upcoming">
-              <Calendar className="h-4 w-4 mr-2" />
-              Upcoming
-            </TabsTrigger>
-            <TabsTrigger value="schedule" data-testid="tab-schedule">
-              <FileText className="h-4 w-4 mr-2" />
-              All Exams
-            </TabsTrigger>
-            {isStudent && (
+            {isStudent ? (
               <>
-                <TabsTrigger value="results" data-testid="tab-results">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Results
+                <TabsTrigger value="tests" data-testid="tab-tests">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Tests
                 </TabsTrigger>
-                <TabsTrigger value="marksheets" data-testid="tab-marksheets">
-                  <Download className="h-4 w-4 mr-2" />
-                  Marksheets
+                <TabsTrigger value="half_yearly" data-testid="tab-half-yearly">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Half Yearly
+                </TabsTrigger>
+                <TabsTrigger value="final" data-testid="tab-final">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Final Exams
+                </TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="upcoming" data-testid="tab-upcoming">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Upcoming
+                </TabsTrigger>
+                <TabsTrigger value="schedule" data-testid="tab-schedule">
+                  <FileText className="h-4 w-4 mr-2" />
+                  All Exams
                 </TabsTrigger>
               </>
             )}
@@ -395,6 +415,201 @@ export default function Examinations() {
                     },
                   ]}
                   testId="all-exams-table"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tests" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tests</CardTitle>
+                <CardDescription>All test examinations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={testExams}
+                  isLoading={examsLoading}
+                  emptyMessage="No test exams available"
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Exam Name',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                            {item.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{item.type}</p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'dates',
+                      header: 'Schedule',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="text-sm">
+                            {format(new Date(item.startDate), 'MMM dd, yyyy')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            to {format(new Date(item.endDate), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'status',
+                      header: 'Status',
+                      cell: (item: any) => getStatusBadge(item),
+                    },
+                    ...(isStudent ? [{
+                      key: 'actions',
+                      header: 'Actions',
+                      cell: (item: any) => (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadMarksheet}
+                          data-testid={`download-marksheet-${item._id}`}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Marksheet
+                        </Button>
+                      ),
+                    }] : []),
+                  ]}
+                  testId="tests-table"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="half_yearly" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Half Yearly Examinations</CardTitle>
+                <CardDescription>All half yearly exams</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={halfYearlyExams}
+                  isLoading={examsLoading}
+                  emptyMessage="No half yearly exams available"
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Exam Name',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                            {item.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{item.type}</p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'dates',
+                      header: 'Schedule',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="text-sm">
+                            {format(new Date(item.startDate), 'MMM dd, yyyy')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            to {format(new Date(item.endDate), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'status',
+                      header: 'Status',
+                      cell: (item: any) => getStatusBadge(item),
+                    },
+                    ...(isStudent ? [{
+                      key: 'actions',
+                      header: 'Actions',
+                      cell: (item: any) => (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadMarksheet}
+                          data-testid={`download-marksheet-${item._id}`}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Marksheet
+                        </Button>
+                      ),
+                    }] : []),
+                  ]}
+                  testId="half-yearly-table"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="final" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Final Examinations</CardTitle>
+                <CardDescription>All final exams</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={finalExams}
+                  isLoading={examsLoading}
+                  emptyMessage="No final exams available"
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Exam Name',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                            {item.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{item.type}</p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'dates',
+                      header: 'Schedule',
+                      cell: (item: any) => (
+                        <div>
+                          <p className="text-sm">
+                            {format(new Date(item.startDate), 'MMM dd, yyyy')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            to {format(new Date(item.endDate), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'status',
+                      header: 'Status',
+                      cell: (item: any) => getStatusBadge(item),
+                    },
+                    ...(isStudent ? [{
+                      key: 'actions',
+                      header: 'Actions',
+                      cell: (item: any) => (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadMarksheet}
+                          data-testid={`download-marksheet-${item._id}`}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Marksheet
+                        </Button>
+                      ),
+                    }] : []),
+                  ]}
+                  testId="final-exams-table"
                 />
               </CardContent>
             </Card>

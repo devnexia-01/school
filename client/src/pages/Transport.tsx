@@ -613,6 +613,16 @@ export default function Transport() {
                     </div>
 
                     <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Drop Stop</p>
+                        <p className="font-semibold" data-testid="text-drop-stop">
+                          {transport.dropStop || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
                       <Clock className="h-5 w-5 text-muted-foreground mt-1" />
                       <div>
                         <p className="text-sm text-muted-foreground">Pickup Time</p>

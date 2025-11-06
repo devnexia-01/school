@@ -3,15 +3,19 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Bus, MapPin, IndianRupee, Calendar, Phone, Mail, UserCircle, GraduationCap } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User, Bus, MapPin, IndianRupee, Calendar, Phone, Mail, UserCircle, GraduationCap, ArrowLeft } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useLocation } from 'wouter';
 
 export default function Profile() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const isStudent = user?.role === 'student';
 
   const { data: profileData, isLoading } = useQuery<{
@@ -59,12 +63,33 @@ export default function Profile() {
       <div className="p-6 space-y-6 max-w-5xl">
         <Breadcrumb items={[{ label: 'My Profile' }]} />
 
-        <div>
-          <h1 className="text-3xl font-semibold" data-testid="text-profile-heading">Student Profile</h1>
-          <p className="text-muted-foreground mt-1">
-            View your personal information, transport details, and fee status
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold" data-testid="text-profile-heading">Student Profile</h1>
+            <p className="text-muted-foreground mt-1">
+              View your personal information, transport details, and fee status
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/dashboard')}
+            data-testid="button-go-back"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go Back
+          </Button>
         </div>
+        
+        {userInfo?.avatar && (
+          <div className="flex justify-center">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={userInfo.avatar} alt={`${userInfo.firstName} ${userInfo.lastName}`} />
+              <AvatarFallback className="text-2xl">
+                {userInfo.firstName?.[0]}{userInfo.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        )}
 
         {/* Personal Information Card */}
         <Card data-testid="card-personal-info">

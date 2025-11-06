@@ -1,18 +1,23 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ClipboardCheck, FileText, IndianRupee, Bell, User, Bus, BookOpen } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Calendar, ClipboardCheck, FileText, IndianRupee, Bell, User, Bus, BookOpen, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { startTransition } from 'react';
 
 export function StudentDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['/api/student/profile'],
@@ -62,15 +67,49 @@ export function StudentDashboard() {
   const announcements = announcementsData?.announcements || [];
   const feePayments = feePaymentsData?.payments || [];
 
-  const todaysTimetable = timetable
+  const todaysTimetableBase = timetable
     .filter((item: any) => {
       const today = new Date().getDay();
       const dayMap: Record<number, number> = { 0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
       return item.day === dayMap[today];
-    })
-    .slice(0, 4);
+    });
 
-  const recentResults = results.slice(0, 3);
+  const todaysTimetable = searchQuery
+    ? todaysTimetableBase
+        .filter((item: any) => {
+          const subjectName = item.subjectId?.name?.toLowerCase() || '';
+          const teacherName = item.teacherId
+            ? `${item.teacherId.firstName} ${item.teacherId.lastName}`.toLowerCase()
+            : '';
+          const query = searchQuery.toLowerCase();
+          return subjectName.includes(query) || teacherName.includes(query);
+        })
+        .slice(0, 4)
+    : todaysTimetableBase.slice(0, 4);
+
+  const recentResults = searchQuery
+    ? results
+        .filter((result: any) => {
+          const examName = result.examId?.name?.toLowerCase() || '';
+          const subjectName = result.subjectId?.name?.toLowerCase() || '';
+          const query = searchQuery.toLowerCase();
+          return examName.includes(query) || subjectName.includes(query);
+        })
+        .slice(0, 3)
+    : results.slice(0, 3);
+
+  const filteredAnnouncements = searchQuery
+    ? announcements.filter((announcement: any) => {
+        const title = announcement.title?.toLowerCase() || '';
+        const content = announcement.content?.toLowerCase() || '';
+        const query = searchQuery.toLowerCase();
+        return title.includes(query) || content.includes(query);
+      })
+    : announcements;
+
+  const hasSearchResults = searchQuery
+    ? todaysTimetable.length > 0 || recentResults.length > 0 || filteredAnnouncements.length > 0
+    : true;
 
   const calculateAttendance = () => 94.2;
   const calculateGPA = () => {
@@ -121,9 +160,74 @@ export function StudentDashboard() {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl">
-      <div>
-        <h1 className="text-3xl font-semibold mb-2">Student Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's your academic overview</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-semibold mb-2">Student Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back! Here's your academic overview</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search dashboard..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-dashboard"
+            />
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="relative" data-testid="button-notifications">
+                <Bell className="h-5 w-5" />
+                {announcements.length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                    {announcements.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end" data-testid="popover-notifications">
+              <div className="p-4 border-b">
+                <h3 className="font-semibold">Recent Announcements</h3>
+              </div>
+              <ScrollArea className="max-h-[400px]">
+                {announcements.length > 0 ? (
+                  <div className="p-2">
+                    {announcements.map((announcement: any) => (
+                      <div
+                        key={announcement._id}
+                        className="p-3 hover:bg-muted rounded-lg cursor-pointer mb-2"
+                        data-testid={`notification-${announcement._id}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="h-2 w-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{announcement.title}</p>
+                            {announcement.content && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {announcement.content}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {announcement.publishedDate
+                                ? format(new Date(announcement.publishedDate), 'MMM dd, yyyy')
+                                : 'Recent'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground text-sm">
+                    No announcements
+                  </div>
+                )}
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -308,7 +412,9 @@ export function StudentDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No classes scheduled for today</p>
+              <p className="text-center text-muted-foreground py-8" data-testid="text-no-timetable-results">
+                {searchQuery ? 'No results found' : 'No classes scheduled for today'}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -406,7 +512,9 @@ export function StudentDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No exam results available</p>
+              <p className="text-center text-muted-foreground py-8" data-testid="text-no-results">
+                {searchQuery ? 'No results found' : 'No exam results available'}
+              </p>
             )}
             <Link href="/examinations">
               <Button variant="outline" className="w-full mt-4" data-testid="button-view-all-results">
@@ -425,9 +533,9 @@ export function StudentDashboard() {
             <CardDescription>Important updates from school</CardDescription>
           </CardHeader>
           <CardContent>
-            {announcements.length > 0 ? (
+            {filteredAnnouncements.length > 0 ? (
               <div className="space-y-3">
-                {announcements.slice(0, 3).map((announcement: any) => (
+                {filteredAnnouncements.slice(0, 3).map((announcement: any) => (
                   <div
                     key={announcement._id}
                     className="flex items-center justify-between p-3 rounded-lg hover-elevate border"
@@ -448,7 +556,9 @@ export function StudentDashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No announcements</p>
+              <p className="text-center text-muted-foreground py-8" data-testid="text-no-announcements">
+                {searchQuery ? 'No results found' : 'No announcements'}
+              </p>
             )}
           </CardContent>
         </Card>

@@ -657,6 +657,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/fee-payments/export', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const userRole = req.user!.role;
+      let payments: any[] = [];
+      
+      if (userRole === 'student') {
+        const userId = req.user!.id;
+        const student = await storage.getStudentByUserId(userId, tenantId);
+        if (student) {
+          const studentPayments = await storage.getFeePaymentsByStudent(student._id, tenantId);
+          payments = await Promise.all(
+            studentPayments.map(async (payment: any) => {
+              const studentData = await storage.getStudent(payment.studentId, tenantId);
+              const user = studentData ? await storage.getUser(studentData.userId) : null;
+              const classData = studentData && studentData.classId ? await storage.getClass(studentData.classId, tenantId) : null;
+              
+              return {
+                id: payment._id,
+                student: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+                admissionNumber: studentData?.admissionNumber || '',
+                class: classData?.name || 'N/A',
+                amount: payment.amount,
+                status: payment.status,
+                date: new Date(payment.paymentDate).toISOString().split('T')[0],
+                receipt: payment.receiptNumber || '',
+                paymentMode: payment.paymentMode || '',
+              };
+            })
+          );
+        }
+      } else {
+        payments = await storage.searchFeePayments(tenantId, '', '');
+      }
+      
+      const csvHeaders = 'Student,Admission Number,Class,Amount,Status,Date,Receipt Number,Payment Mode\n';
+      const csvRows = payments.map(p => 
+        `"${p.student}","${p.admissionNumber}","${p.class}",${p.amount},"${p.status}","${p.date}","${p.receipt}","${p.paymentMode}"`
+      ).join('\n');
+      const csv = csvHeaders + csvRows;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=fee-payments.csv');
+      res.send(csv);
+    } catch (error) {
+      console.error('Export fee payments error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Announcements Routes ============
   app.get('/api/announcements', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
@@ -1092,6 +1142,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Get student profile error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/student/attendance', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const attendance = await storage.getStudentAttendanceRecords(student._id, tenantId);
+      res.json({ attendance });
+    } catch (error) {
+      console.error('Get student attendance error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/student/teachers', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId!;
+      
+      const student = await storage.getStudentByUserId(userId, tenantId);
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+      
+      const teachers = await storage.getTeachersForStudentClass(student._id, tenantId);
+      res.json({ teachers });
+    } catch (error) {
+      console.error('Get student teachers error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Preferences Routes ============
+  app.get('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      let preferences = await storage.getUserPreferences(userId);
+      
+      if (!preferences) {
+        preferences = await storage.createUserPreferences({
+          userId,
+          theme: 'system',
+          language: 'en',
+          emailNotifications: true,
+          pushNotifications: true,
+          timezone: 'UTC',
+          dateFormat: 'MM/DD/YYYY',
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error('Get preferences error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.put('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { theme, emailNotifications, pushNotifications, dateFormat } = req.body;
+      
+      let preferences = await storage.getUserPreferences(userId);
+      
+      if (!preferences) {
+        preferences = await storage.createUserPreferences({
+          userId,
+          theme: theme || 'system',
+          language: 'en',
+          emailNotifications: emailNotifications !== false,
+          pushNotifications: pushNotifications !== false,
+          timezone: 'UTC',
+          dateFormat: dateFormat || 'MM/DD/YYYY',
+        });
+      } else {
+        preferences = await storage.updateUserPreferences(userId, {
+          theme,
+          emailNotifications,
+          pushNotifications,
+          dateFormat,
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error('Update preferences error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

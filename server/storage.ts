@@ -182,6 +182,18 @@ export interface IStorage {
   createLeaveRequest(leaveRequest: Partial<LeaveRequest>): Promise<LeaveRequest>;
   updateLeaveRequest(leaveId: string, tenantId: string, updateData: Partial<LeaveRequest>): Promise<LeaveRequest>;
   deleteLeaveRequest(leaveId: string, tenantId: string): Promise<void>;
+  
+  // Student Attendance
+  getStudentAttendanceRecords(studentId: string, tenantId: string): Promise<any[]>;
+  
+  // Student Teachers
+  getTeachersForStudentClass(studentId: string, tenantId: string): Promise<any[]>;
+  
+  // Timetable
+  createTimetable(data: any): Promise<any>;
+  updateTimetable(id: string, data: any, tenantId: string): Promise<any>;
+  deleteTimetable(id: string, tenantId: string): Promise<boolean>;
+  checkTimetableConflict(classId: string, dayOfWeek: string, startTime: string, endTime: string, tenantId: string, excludeId: string | null): Promise<boolean>;
 }
 
 function toPlainObject(doc: any): any {
@@ -1405,6 +1417,91 @@ export class DatabaseStorage implements IStorage {
     if (!result) {
       throw new Error('Leave request not found or access denied');
     }
+  }
+  
+  // Student Attendance
+  async getStudentAttendanceRecords(studentId: string, tenantId: string): Promise<any[]> {
+    const attendance = await AttendanceModel.find({
+      tenantId,
+      studentId
+    })
+    .sort({ date: -1 })
+    .lean();
+    
+    const monthlyStats: any = {};
+    
+    attendance.forEach((record: any) => {
+      const date = new Date(record.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyStats[monthKey]) {
+        monthlyStats[monthKey] = {
+          month: monthKey,
+          present: 0,
+          absent: 0,
+          late: 0,
+          half_day: 0,
+          total: 0
+        };
+      }
+      
+      monthlyStats[monthKey][record.status]++;
+      monthlyStats[monthKey].total++;
+    });
+    
+    const result = Object.values(monthlyStats).map((stats: any) => ({
+      ...stats,
+      percentage: stats.total > 0 ? ((stats.present + stats.half_day * 0.5) / stats.total * 100).toFixed(2) : '0.00'
+    }));
+    
+    return result;
+  }
+  
+  // Student Teachers
+  async getTeachersForStudentClass(studentId: string, tenantId: string): Promise<any[]> {
+    const student = await StudentModel.findOne({ _id: studentId, tenantId });
+    if (!student || !student.classId) {
+      return [];
+    }
+    
+    const timetable = await TimetableModel.find({
+      tenantId,
+      classId: student.classId
+    })
+    .populate('teacherId', 'firstName lastName email phone')
+    .populate('subjectId', 'name code')
+    .lean();
+    
+    const teachersMap = new Map();
+    
+    timetable.forEach((entry: any) => {
+      if (entry.teacherId) {
+        const teacherId = entry.teacherId._id.toString();
+        if (!teachersMap.has(teacherId)) {
+          teachersMap.set(teacherId, {
+            _id: teacherId,
+            name: `${entry.teacherId.firstName} ${entry.teacherId.lastName}`,
+            email: entry.teacherId.email,
+            phone: entry.teacherId.phone,
+            subjects: []
+          });
+        }
+        
+        if (entry.subjectId) {
+          const teacher = teachersMap.get(teacherId);
+          const subjectExists = teacher.subjects.some((s: any) => s._id === entry.subjectId._id.toString());
+          if (!subjectExists) {
+            teacher.subjects.push({
+              _id: entry.subjectId._id.toString(),
+              name: entry.subjectId.name,
+              code: entry.subjectId.code
+            });
+          }
+        }
+      }
+    });
+    
+    return Array.from(teachersMap.values());
   }
 }
 
