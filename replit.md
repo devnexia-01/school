@@ -21,6 +21,13 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
   - Removed date format preference for simplicity
 - **Student Profile Display**: Student profile already correctly displays all parent details (father's name, mother's name, parent contact, address)
 - **Type Safety**: Fixed optional classId handling in student profile API to prevent TypeScript errors
+- **Clickable Announcements & Messages**: Made all announcements, messages, and notifications clickable across all dashboards
+  - StudentDashboard: Announcement cards now clickable to view full content in dialog
+  - FacultyDashboard: Message cards now clickable to view full content in dialog
+  - Dialog implementation follows Communication.tsx pattern with graceful fallbacks
+  - Full content displayed (not truncated) when clicking on cards
+  - All elements have proper data-testid attributes for testing
+  - Verified all dashboards have no search functionality (AdminDashboard, PrincipalDashboard, ParentDashboard, SuperAdminDashboard)
 
 ### Bug Fixes and Feature Enhancements (October 31, 2025 - Session 2)
 - **Attendance Status Fix**: Fixed attendance marking buttons stuck on 'present' - modified handleStatusChange to immutably update state when clicking absent/late/half-day status buttons
