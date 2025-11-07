@@ -10,12 +10,14 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { startTransition } from 'react';
 
 export function StudentDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<any>(null);
 
   const { data: profileData, isLoading: profileLoading } = useQuery<any>({
     queryKey: ['/api/student/profile'],
@@ -490,25 +492,45 @@ export function StudentDashboard() {
           <CardContent>
             {filteredAnnouncements.length > 0 ? (
               <div className="space-y-3">
-                {filteredAnnouncements.slice(0, 3).map((announcement: any) => (
-                  <div
-                    key={announcement._id}
-                    className="flex items-center justify-between p-3 rounded-lg hover-elevate border"
-                    data-testid={`announcement-${announcement._id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full bg-blue-500`} />
-                      <div>
-                        <p className="font-medium">{announcement.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {announcement.publishedDate
-                            ? format(new Date(announcement.publishedDate), 'MMM dd, yyyy')
-                            : 'Recent'}
-                        </p>
+                {filteredAnnouncements.slice(0, 3).map((announcement: any) => {
+                  const contentPreview = announcement.content?.length > 100 
+                    ? announcement.content.substring(0, 100) + '...' 
+                    : announcement.content || '';
+                  const hasContent = announcement.content && announcement.content.length > 0;
+                  
+                  return (
+                    <div
+                      key={announcement._id}
+                      className="p-3 rounded-lg hover-elevate border cursor-pointer transition-all"
+                      onClick={() => setSelectedAnnouncement(announcement)}
+                      data-testid={`announcement-${announcement._id}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-2 w-2 rounded-full ${
+                            announcement.priority === 'high' ? 'bg-red-500' :
+                            announcement.priority === 'normal' ? 'bg-blue-500' :
+                            'bg-gray-400'
+                          }`} />
+                          <p className="font-medium">{announcement.title}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {announcement.priority || 'normal'}
+                        </Badge>
                       </div>
+                      {hasContent && (
+                        <p className="text-sm text-muted-foreground mb-2 ml-4">
+                          {contentPreview}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground ml-4">
+                        {announcement.publishedDate
+                          ? format(new Date(announcement.publishedDate), 'MMM dd, yyyy')
+                          : 'Recent'}
+                      </p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8" data-testid="text-no-announcements">
@@ -518,6 +540,44 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Full View Dialog for Announcements */}
+      <Dialog open={!!selectedAnnouncement} onOpenChange={() => setSelectedAnnouncement(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-announcement-detail">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`h-2 w-2 rounded-full ${
+                selectedAnnouncement?.priority === 'high' ? 'bg-red-500' :
+                selectedAnnouncement?.priority === 'normal' ? 'bg-blue-500' :
+                'bg-gray-400'
+              }`} />
+              <Badge variant="outline" className="text-xs" data-testid="badge-announcement-priority">
+                {selectedAnnouncement?.priority || 'normal'}
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl" data-testid="text-announcement-title">
+              {selectedAnnouncement?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-announcement-content">
+              {selectedAnnouncement?.content}
+            </p>
+            <div className="pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
+              <span data-testid="text-announcement-published-by">
+                Published by {selectedAnnouncement?.publishedBy?.firstName || 'Admin'}
+              </span>
+              <span data-testid="text-announcement-date">
+                {selectedAnnouncement && selectedAnnouncement.publishedDate 
+                  ? format(new Date(selectedAnnouncement.publishedDate), 'MMM dd, yyyy')
+                  : selectedAnnouncement && selectedAnnouncement.publishedAt
+                  ? format(new Date(selectedAnnouncement.publishedAt), 'MMM dd, yyyy')
+                  : 'Recent'}
+              </span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, ClipboardCheck, FileText, MessageSquare, Wallet, CalendarDays, BookOpen, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Link } from 'wouter';
 import { StatCard } from '@/components/shared/StatCard';
 import { formatCurrencyINR } from '@/lib/utils';
 
 export function FacultyDashboard() {
+  const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const todaysClasses = [
     { id: '1', time: '09:00 AM', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 201', status: 'upcoming' },
     { id: '2', time: '10:30 AM', class: 'Grade 9-B', subject: 'Mathematics', room: 'Room 201', status: 'upcoming' },
@@ -197,7 +200,12 @@ export function FacultyDashboard() {
           <CardContent>
             <div className="space-y-4">
               {recentMessages.map((message) => (
-                <div key={message.id} className="p-4 rounded-lg hover-elevate border cursor-pointer">
+                <div 
+                  key={message.id} 
+                  className="p-4 rounded-lg hover-elevate border cursor-pointer transition-all"
+                  onClick={() => setSelectedMessage(message)}
+                  data-testid={`message-${message.id}`}
+                >
                   <div className="flex items-start gap-3">
                     <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10">
                       <MessageSquare className="h-5 w-5 text-primary" />
@@ -214,6 +222,37 @@ export function FacultyDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Full View Dialog for Messages */}
+      <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-message-detail">
+          <DialogHeader>
+            <DialogTitle className="text-xl" data-testid="text-message-subject">
+              {selectedMessage?.subject}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">From:</p>
+              <p className="text-sm" data-testid="text-message-from">{selectedMessage?.from}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Message:</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap" data-testid="text-message-content">
+                {selectedMessage?.subject === 'Question about assignment' && 
+                  "Hello, I wanted to ask about the assignment that was given last week. My child is having difficulty understanding the requirements. Could you please provide some additional guidance or clarification? Thank you for your time."}
+                {selectedMessage?.subject === 'Faculty meeting reminder' && 
+                  "This is a reminder about the upcoming faculty meeting scheduled for tomorrow at 2:00 PM in the conference room. Please review the agenda attached and come prepared with your department updates. Your attendance is mandatory."}
+                {selectedMessage?.subject === 'Updated exam schedule' && 
+                  "Please note that the exam schedule has been updated. The mid-term examinations will now begin on February 15th instead of February 10th. Please update your records and inform your students accordingly. The detailed schedule is available on the portal."}
+              </p>
+            </div>
+            <div className="pt-4 border-t flex items-center justify-between text-sm text-muted-foreground">
+              <span data-testid="text-message-time">{selectedMessage?.time}</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
