@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Calendar, ClipboardCheck, FileText, IndianRupee, Bell, User, Bus, BookOpen, Search } from 'lucide-react';
+import { Calendar, ClipboardCheck, FileText, IndianRupee, Bell, User, Bus, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Link, useLocation } from 'wouter';
@@ -17,44 +16,43 @@ import { startTransition } from 'react';
 export function StudentDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: profileData, isLoading: profileLoading } = useQuery({
+  const { data: profileData, isLoading: profileLoading } = useQuery<any>({
     queryKey: ['/api/student/profile'],
     enabled: !!user && user.role === 'student',
   });
 
-  const { data: timetableData, isLoading: timetableLoading } = useQuery({
+  const { data: timetableData, isLoading: timetableLoading } = useQuery<any>({
     queryKey: ['/api/student/timetable'],
     enabled: !!user && user.role === 'student',
   });
 
-  const { data: examResults, isLoading: resultsLoading } = useQuery({
+  const { data: examResults, isLoading: resultsLoading } = useQuery<any>({
     queryKey: ['/api/student/exam-results'],
     enabled: !!user && user.role === 'student',
   });
 
-  const { data: transportData } = useQuery({
+  const { data: transportData } = useQuery<any>({
     queryKey: ['/api/student/transport'],
     enabled: !!user && user.role === 'student',
   });
 
-  const { data: announcementsData } = useQuery({
+  const { data: announcementsData } = useQuery<any>({
     queryKey: ['/api/announcements'],
     enabled: !!user,
   });
 
-  const { data: notificationsCount } = useQuery({
+  const { data: notificationsCount } = useQuery<any>({
     queryKey: ['/api/notifications/unread-count'],
     enabled: !!user,
   });
 
-  const { data: messagesCount } = useQuery({
+  const { data: messagesCount } = useQuery<any>({
     queryKey: ['/api/messages/unread-count'],
     enabled: !!user,
   });
 
-  const { data: feePaymentsData } = useQuery({
+  const { data: feePaymentsData } = useQuery<any>({
     queryKey: ['/api/fee-payments/student', profileData?.student?._id],
     enabled: !!profileData?.student?._id,
   });
@@ -67,49 +65,16 @@ export function StudentDashboard() {
   const announcements = announcementsData?.announcements || [];
   const feePayments = feePaymentsData?.payments || [];
 
-  const todaysTimetableBase = timetable
+  const todaysTimetable = timetable
     .filter((item: any) => {
       const today = new Date().getDay();
       const dayMap: Record<number, number> = { 0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };
       return item.day === dayMap[today];
-    });
+    })
+    .slice(0, 4);
 
-  const todaysTimetable = searchQuery
-    ? todaysTimetableBase
-        .filter((item: any) => {
-          const subjectName = item.subjectId?.name?.toLowerCase() || '';
-          const teacherName = item.teacherId
-            ? `${item.teacherId.firstName} ${item.teacherId.lastName}`.toLowerCase()
-            : '';
-          const query = searchQuery.toLowerCase();
-          return subjectName.includes(query) || teacherName.includes(query);
-        })
-        .slice(0, 4)
-    : todaysTimetableBase.slice(0, 4);
-
-  const recentResults = searchQuery
-    ? results
-        .filter((result: any) => {
-          const examName = result.examId?.name?.toLowerCase() || '';
-          const subjectName = result.subjectId?.name?.toLowerCase() || '';
-          const query = searchQuery.toLowerCase();
-          return examName.includes(query) || subjectName.includes(query);
-        })
-        .slice(0, 3)
-    : results.slice(0, 3);
-
-  const filteredAnnouncements = searchQuery
-    ? announcements.filter((announcement: any) => {
-        const title = announcement.title?.toLowerCase() || '';
-        const content = announcement.content?.toLowerCase() || '';
-        const query = searchQuery.toLowerCase();
-        return title.includes(query) || content.includes(query);
-      })
-    : announcements;
-
-  const hasSearchResults = searchQuery
-    ? todaysTimetable.length > 0 || recentResults.length > 0 || filteredAnnouncements.length > 0
-    : true;
+  const recentResults = results.slice(0, 3);
+  const filteredAnnouncements = announcements;
 
   const calculateAttendance = () => 94.2;
   const calculateGPA = () => {
@@ -166,16 +131,6 @@ export function StudentDashboard() {
           <p className="text-muted-foreground">Welcome back! Here's your academic overview</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search dashboard..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-dashboard"
-            />
-          </div>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative" data-testid="button-notifications">
@@ -413,7 +368,7 @@ export function StudentDashboard() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8" data-testid="text-no-timetable-results">
-                {searchQuery ? 'No results found' : 'No classes scheduled for today'}
+                No classes scheduled for today
               </p>
             )}
           </CardContent>
@@ -513,7 +468,7 @@ export function StudentDashboard() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8" data-testid="text-no-results">
-                {searchQuery ? 'No results found' : 'No exam results available'}
+                No exam results available
               </p>
             )}
             <Link href="/examinations">
@@ -557,7 +512,7 @@ export function StudentDashboard() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8" data-testid="text-no-announcements">
-                {searchQuery ? 'No results found' : 'No announcements'}
+                No announcements
               </p>
             )}
           </CardContent>

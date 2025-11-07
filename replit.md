@@ -6,6 +6,22 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
 
 ## Recent Changes
 
+### UI/UX Improvements (November 7, 2025)
+- **Student Dashboard Simplification**: Removed search functionality from student dashboard for cleaner, more focused UI
+- **Enhanced Student Registration**: Added parent details to Add Student form:
+  - Father's Name field for paternal information
+  - Mother's Name field for maternal information  
+  - Parent Contact field for primary guardian contact
+  - Address field for student residence
+  - All fields properly validated and stored in database
+- **Preferences Simplification**: Streamlined preferences page to only essential settings:
+  - Theme selector (light/dark appearance)
+  - Email notifications toggle
+  - Push notifications toggle
+  - Removed date format preference for simplicity
+- **Student Profile Display**: Student profile already correctly displays all parent details (father's name, mother's name, parent contact, address)
+- **Type Safety**: Fixed optional classId handling in student profile API to prevent TypeScript errors
+
 ### Bug Fixes and Feature Enhancements (October 31, 2025 - Session 2)
 - **Attendance Status Fix**: Fixed attendance marking buttons stuck on 'present' - modified handleStatusChange to immutably update state when clicking absent/late/half-day status buttons
 - **Add Exam Feature**: Implemented complete exam creation UI for admin/principal roles with dialog form, validation, React Query mutation, cache invalidation, and data-testid attributes for testing

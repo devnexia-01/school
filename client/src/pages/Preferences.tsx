@@ -24,7 +24,6 @@ export default function Preferences() {
     theme: 'system',
     emailNotifications: true,
     pushNotifications: true,
-    dateFormat: 'MM/DD/YYYY',
   });
 
   useEffect(() => {
@@ -33,7 +32,6 @@ export default function Preferences() {
         theme: preferences.theme || 'system',
         emailNotifications: preferences.emailNotifications !== false,
         pushNotifications: preferences.pushNotifications !== false,
-        dateFormat: preferences.dateFormat || 'MM/DD/YYYY',
       });
     }
   }, [preferences]);
@@ -171,34 +169,6 @@ export default function Preferences() {
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
                   <SelectItem value="system">System</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Date Format
-            </CardTitle>
-            <CardDescription>Customize how dates are displayed</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="dateFormat">Date Format</Label>
-              <Select
-                value={formData.dateFormat}
-                onValueChange={(value) => setFormData({ ...formData, dateFormat: value })}
-              >
-                <SelectTrigger id="dateFormat" data-testid="select-dateformat">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
                 </SelectContent>
               </Select>
             </div>

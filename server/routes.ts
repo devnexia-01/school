@@ -1097,9 +1097,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transport = await storage.getStudentTransportDetails(student._id, tenantId);
       
       // Get fee summary
-      const feeClass = await storage.getClass(student.classId, tenantId);
+      const feeClass = student.classId ? await storage.getClass(student.classId, tenantId) : null;
       const feeStructures = await storage.getFeeStructuresByTenant(tenantId);
-      const classFeeStructures = feeStructures.filter((fs: any) => fs.classId === student.classId);
+      const classFeeStructures = student.classId ? feeStructures.filter((fs: any) => fs.classId === student.classId) : [];
       const totalFees = classFeeStructures.reduce((sum: number, fs: any) => sum + (fs.amount || 0), 0);
       
       const feePayments = await storage.getFeePaymentsByStudent(student._id, tenantId);
@@ -1211,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
-      const { theme, emailNotifications, pushNotifications, dateFormat } = req.body;
+      const { theme, emailNotifications, pushNotifications } = req.body;
       
       let preferences = await storage.getUserPreferences(userId);
       
@@ -1223,14 +1223,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailNotifications: emailNotifications !== false,
           pushNotifications: pushNotifications !== false,
           timezone: 'UTC',
-          dateFormat: dateFormat || 'MM/DD/YYYY',
+          dateFormat: 'MM/DD/YYYY',
         });
       } else {
         preferences = await storage.updateUserPreferences(userId, {
           theme,
           emailNotifications,
           pushNotifications,
-          dateFormat,
         });
       }
       

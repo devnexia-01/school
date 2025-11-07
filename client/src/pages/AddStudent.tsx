@@ -27,6 +27,9 @@ const studentFormSchema = z.object({
   gender: z.enum(['male', 'female', 'other']),
   bloodGroup: z.string().optional().nullable(),
   parentId: z.string().optional().nullable(),
+  fatherName: z.string().optional().nullable(),
+  motherName: z.string().optional().nullable(),
+  parentContact: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   emergencyContact: z.string().optional().nullable(),
   admissionDate: z.string().min(1, 'Admission date is required'),
@@ -56,6 +59,9 @@ export default function AddStudent() {
       gender: 'male',
       bloodGroup: null,
       parentId: null,
+      fatherName: null,
+      motherName: null,
+      parentContact: null,
       address: null,
       emergencyContact: null,
       admissionDate: new Date().toISOString().split('T')[0],
@@ -265,6 +271,48 @@ export default function AddStudent() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="fatherName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Father's Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ''} data-testid="input-father-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="motherName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mother's Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ''} data-testid="input-mother-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="parentContact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent Contact</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ''} data-testid="input-parent-contact" />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
