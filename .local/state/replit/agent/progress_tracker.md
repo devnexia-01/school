@@ -288,3 +288,9 @@
 [x] 288. Architect reviewed and confirmed the fix approach - no security issues
 [x] 289. Application restarted successfully with HMR working
 [x] 290. Timetable entries now properly display after creation in admin and other views
+[x] 291. November 07, 2025 - Fixed class selection dropdown in Add Student form
+[x] 292. Root cause: Frontend was using `cls.id` but MongoDB uses `cls._id`
+[x] 293. Updated AddStudent.tsx to use `_id` instead of `id` for class selection
+[x] 294. Updated Students.tsx filter dropdown to use `_id` for consistency
+[x] 295. Fixed TypeScript types to match MongoDB schema (changed from `id: string` to `_id: string`)
+[x] 296. Application restarted successfully - class dropdown now displays available classes

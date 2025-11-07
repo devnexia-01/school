@@ -38,7 +38,7 @@ export default function AddStudent() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: classesData } = useQuery<{ classes: Array<{ id: string; name: string }> }>({
+  const { data: classesData } = useQuery<{ classes: Array<{ _id: string; name: string }> }>({
     queryKey: ['/api/classes'],
   });
 
@@ -259,7 +259,7 @@ export default function AddStudent() {
                           </FormControl>
                           <SelectContent>
                             {classesData?.classes?.map((cls: any) => (
-                              <SelectItem key={cls.id} value={cls.id}>
+                              <SelectItem key={cls._id} value={cls._id}>
                                 {cls.name}
                               </SelectItem>
                             ))}

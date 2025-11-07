@@ -24,7 +24,7 @@ export default function Students() {
     queryKey: ['/api/students'],
   });
 
-  const { data: classesData } = useQuery<{ classes: Array<{ id: string; name: string }> }>({
+  const { data: classesData } = useQuery<{ classes: Array<{ _id: string; name: string }> }>({
     queryKey: ['/api/classes'],
   });
 
@@ -95,7 +95,7 @@ export default function Students() {
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
                   {classesData?.classes?.map((classItem) => (
-                    <SelectItem key={classItem.id} value={classItem.name}>
+                    <SelectItem key={classItem._id} value={classItem.name}>
                       {classItem.name}
                     </SelectItem>
                   ))}
