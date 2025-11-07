@@ -147,7 +147,7 @@ export default function Timetable() {
   const { data: timetableData, isLoading } = useQuery<{ timetable: TimetableEntry[] }>({
     queryKey: user?.role === 'student' 
       ? ['/api/student/timetable'] 
-      : ['/api/timetable', selectedClass],
+      : [`/api/timetable?classId=${selectedClass}`],
     enabled: user?.role === 'student' || !!selectedClass,
   });
 
@@ -210,7 +210,11 @@ export default function Timetable() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/timetable')
+      });
       toast({ title: 'Success', description: 'Timetable entry created successfully' });
       setIsDialogOpen(false);
       form.reset();
@@ -231,7 +235,11 @@ export default function Timetable() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/timetable')
+      });
       toast({ title: 'Success', description: 'Timetable entry updated successfully' });
       setIsDialogOpen(false);
       setEditingEntry(null);
@@ -252,7 +260,11 @@ export default function Timetable() {
         method: 'DELETE',
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/timetable'] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/timetable')
+      });
       toast({ title: 'Success', description: 'Timetable entry deleted successfully' });
     },
     onError: (error: any) => {

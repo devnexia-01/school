@@ -281,3 +281,10 @@
 [x] 281. Updated form reset and edit logic to handle both old (teacherId) and new (teacherName) entries
 [x] 282. Application restarted successfully - timetable form now accepts teacher names as text input
 [x] 283. Admin can now add timetable entries by typing teacher names directly
+[x] 284. November 07, 2025 - Fixed timetable entries not showing in admin view
+[x] 285. Root cause: Frontend was constructing URL as path parameter instead of query parameter
+[x] 286. Updated queryKey from `['/api/timetable', selectedClass]` to `['/api/timetable?classId=${selectedClass}']`
+[x] 287. Updated all three cache invalidation calls to use predicate matching '/api/timetable' prefix
+[x] 288. Architect reviewed and confirmed the fix approach - no security issues
+[x] 289. Application restarted successfully with HMR working
+[x] 290. Timetable entries now properly display after creation in admin and other views
