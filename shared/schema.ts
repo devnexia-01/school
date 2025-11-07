@@ -257,6 +257,7 @@ const TimetableSchema = new Schema({
   classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
   subjectId: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
   teacherId: { type: Schema.Types.ObjectId, ref: 'User' },
+  teacherName: { type: String },
   dayOfWeek: { type: String, enum: Object.values(DayOfWeek), required: true },
   startTime: { type: String, required: true },
   endTime: { type: String, required: true },

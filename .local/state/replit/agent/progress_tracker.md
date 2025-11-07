@@ -272,3 +272,12 @@
 [x] 272. All migration tasks completed - School ERP fully operational in Replit environment
 [x] 273. Project ready for development and production use - November 07, 2025
 [x] 274. Migration from Replit Agent to Replit environment COMPLETED - All 274 items marked as done
+[x] 275. November 07, 2025 - Fixed timetable teacher selection issue
+[x] 276. Changed teacher field from Select dropdown to text Input field in timetable form
+[x] 277. Updated TimetableSchema to add teacherName field (string) alongside teacherId
+[x] 278. Updated frontend TimetableEntry interface to support both teacherId and teacherName
+[x] 279. Modified form to use teacherName instead of teacherId for new entries
+[x] 280. Updated display logic to show teacherName if available, fallback to teacherId name
+[x] 281. Updated form reset and edit logic to handle both old (teacherId) and new (teacherName) entries
+[x] 282. Application restarted successfully - timetable form now accepts teacher names as text input
+[x] 283. Admin can now add timetable entries by typing teacher names directly

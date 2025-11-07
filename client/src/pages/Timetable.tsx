@@ -30,11 +30,12 @@ interface TimetableEntry {
     name: string;
     code: string;
   };
-  teacherId: {
+  teacherId?: {
     _id: string;
     firstName: string;
     lastName: string;
   };
+  teacherName?: string;
   dayOfWeek: string;
   startTime: string;
   endTime: string;
@@ -82,7 +83,7 @@ const COLORS = [
 const timetableSchema = z.object({
   classId: z.string().min(1, 'Class is required'),
   subjectId: z.string().min(1, 'Subject is required'),
-  teacherId: z.string().min(1, 'Teacher is required'),
+  teacherName: z.string().min(1, 'Teacher name is required'),
   dayOfWeek: z.string().min(1, 'Day of week is required'),
   startTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Start time must be in HH:MM format'),
   endTime: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'End time must be in HH:MM format'),
@@ -160,7 +161,7 @@ export default function Timetable() {
     defaultValues: {
       classId: '',
       subjectId: '',
-      teacherId: '',
+      teacherName: '',
       dayOfWeek: '',
       startTime: '',
       endTime: '',
@@ -180,7 +181,8 @@ export default function Timetable() {
       form.reset({
         classId: editingEntry.classId._id,
         subjectId: editingEntry.subjectId._id,
-        teacherId: editingEntry.teacherId._id,
+        teacherName: editingEntry.teacherName || 
+          (editingEntry.teacherId ? `${editingEntry.teacherId.firstName} ${editingEntry.teacherId.lastName}` : ''),
         dayOfWeek: editingEntry.dayOfWeek,
         startTime: editingEntry.startTime,
         endTime: editingEntry.endTime,
@@ -191,7 +193,7 @@ export default function Timetable() {
       form.reset({
         classId: '',
         subjectId: '',
-        teacherId: '',
+        teacherName: '',
         dayOfWeek: '',
         startTime: '',
         endTime: '',
@@ -286,7 +288,7 @@ export default function Timetable() {
     form.reset({
       classId: '',
       subjectId: '',
-      teacherId: '',
+      teacherName: '',
       dayOfWeek: '',
       startTime: '',
       endTime: '',
@@ -364,9 +366,10 @@ export default function Timetable() {
                                   {classForSlot.subjectId?.name || 'Subject'}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {classForSlot.teacherId
-                                    ? `${classForSlot.teacherId.firstName} ${classForSlot.teacherId.lastName}`
-                                    : 'Teacher'}
+                                  {classForSlot.teacherName || 
+                                    (classForSlot.teacherId
+                                      ? `${classForSlot.teacherId.firstName} ${classForSlot.teacherId.lastName}`
+                                      : 'Teacher')}
                                 </p>
                                 {classForSlot.roomNumber && (
                                   <p className="text-xs text-muted-foreground mt-1">
@@ -506,24 +509,17 @@ export default function Timetable() {
 
                           <FormField
                             control={form.control}
-                            name="teacherId"
+                            name="teacherName"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Teacher</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger data-testid="input-teacher-name">
-                                      <SelectValue placeholder="Select a teacher" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {teachers.map((teacher) => (
-                                      <SelectItem key={teacher._id} value={teacher._id}>
-                                        {teacher.firstName} {teacher.lastName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <FormLabel>Teacher Name</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Enter teacher name" 
+                                    {...field} 
+                                    data-testid="input-teacher-name" 
+                                  />
+                                </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
