@@ -182,9 +182,6 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <DropdownMenuItem onClick={() => startTransition(() => setLocation('/profile'))} data-testid="button-profile">
                     Profile Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => startTransition(() => setLocation('/preferences'))} data-testid="button-preferences">
-                    Preferences
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} data-testid="button-logout">
                     Logout

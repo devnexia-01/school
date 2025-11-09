@@ -122,7 +122,7 @@ export interface IStorage {
   updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User>;
   
   // Support Tickets
-  getSupportTickets(): Promise<SupportTicket[]>;
+  getSupportTickets(userId?: string): Promise<SupportTicket[]>;
   getSupportTicket(id: string): Promise<SupportTicket | undefined>;
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
   updateSupportTicket(id: string, ticketData: Partial<SupportTicket>): Promise<SupportTicket>;
@@ -1566,8 +1566,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Support Tickets
-  async getSupportTickets(): Promise<SupportTicket[]> {
-    const tickets = await SupportTicketModel.find()
+  async getSupportTickets(userId?: string): Promise<SupportTicket[]> {
+    const query = userId ? { createdBy: userId } : {};
+    const tickets = await SupportTicketModel.find(query)
       .populate('tenantId', 'name')
       .populate('createdBy', 'firstName lastName email')
       .populate('assignedTo', 'firstName lastName')

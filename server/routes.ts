@@ -847,62 +847,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ User Preferences Routes ============
-  app.get('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      let prefs = await storage.getUserPreferences(userId);
-      
-      if (!prefs) {
-        prefs = await storage.createUserPreferences({ 
-          userId,
-          emailNotifications: true,
-          pushNotifications: true,
-        });
-      }
-      
-      res.json(prefs);
-    } catch (error) {
-      console.error('Get preferences error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  app.put('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const { theme, language, emailNotifications, pushNotifications, timezone, dateFormat } = req.body;
-      
-      let prefs = await storage.getUserPreferences(userId);
-      
-      if (!prefs) {
-        prefs = await storage.createUserPreferences({
-          userId,
-          theme,
-          language,
-          emailNotifications,
-          pushNotifications,
-          timezone,
-          dateFormat,
-        });
-      } else {
-        prefs = await storage.updateUserPreferences(userId, {
-          theme,
-          language,
-          emailNotifications,
-          pushNotifications,
-          timezone,
-          dateFormat,
-        });
-      }
-      
-      res.json(prefs);
-    } catch (error) {
-      console.error('Update preferences error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
   // ============ Tenants Routes (Super Admin only) ============
   app.get('/api/tenants', authenticateToken, requireRole(['super_admin']), async (_req: AuthRequest, res) => {
     try {
@@ -952,6 +896,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: 'Validation failed', details: error.errors });
       }
+      
+      // Handle MongoDB duplicate key errors
+      if (error.code === 11000) {
+        const duplicateField = Object.keys(error.keyPattern || {})[0];
+        let errorMessage = 'A school with this information already exists';
+        
+        if (duplicateField === 'code') {
+          errorMessage = 'School code already exists';
+        } else if (duplicateField === 'name') {
+          errorMessage = 'School name already exists';
+        }
+        
+        return res.status(409).json({ error: errorMessage });
+      }
+      
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1305,64 +1264,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ Preferences Routes ============
-  app.get('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      
-      let preferences = await storage.getUserPreferences(userId);
-      
-      if (!preferences) {
-        preferences = await storage.createUserPreferences({
-          userId,
-          theme: 'system',
-          language: 'en',
-          emailNotifications: true,
-          pushNotifications: true,
-          timezone: 'UTC',
-          dateFormat: 'MM/DD/YYYY',
-        });
-      }
-      
-      res.json(preferences);
-    } catch (error) {
-      console.error('Get preferences error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  app.put('/api/preferences', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const { theme, emailNotifications, pushNotifications } = req.body;
-      
-      let preferences = await storage.getUserPreferences(userId);
-      
-      if (!preferences) {
-        preferences = await storage.createUserPreferences({
-          userId,
-          theme: theme || 'system',
-          language: 'en',
-          emailNotifications: emailNotifications !== false,
-          pushNotifications: pushNotifications !== false,
-          timezone: 'UTC',
-          dateFormat: 'MM/DD/YYYY',
-        });
-      } else {
-        preferences = await storage.updateUserPreferences(userId, {
-          theme,
-          emailNotifications,
-          pushNotifications,
-        });
-      }
-      
-      res.json(preferences);
-    } catch (error) {
-      console.error('Update preferences error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
   // ============ Payroll Routes ============
   app.get('/api/payroll', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
     try {
@@ -1522,9 +1423,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ Support Tickets Routes ============
-  app.get('/api/support-tickets', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+  app.get('/api/support-tickets', authenticateToken, requireRole(['super_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
-      const tickets = await storage.getSupportTickets();
+      const userRole = req.user!.role;
+      const userId = req.user!.id;
+      
+      // Super admin sees all tickets, admin sees only their own tickets
+      const tickets = userRole === 'super_admin' 
+        ? await storage.getSupportTickets() 
+        : await storage.getSupportTickets(userId);
       
       const formattedTickets = tickets.map((ticket: any) => ({
         id: ticket._id,

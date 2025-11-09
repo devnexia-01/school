@@ -27,7 +27,6 @@ const Tenants = lazy(() => import("@/pages/Tenants"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
 const RaiseTicket = lazy(() => import("@/pages/RaiseTicket"));
 const Profile = lazy(() => import("@/pages/Profile"));
-const Preferences = lazy(() => import("@/pages/Preferences"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function LoadingSpinner() {
@@ -142,9 +141,6 @@ function Router() {
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={Profile} />
-      </Route>
-      <Route path="/preferences">
-        <ProtectedRoute component={Preferences} />
       </Route>
       <Route component={NotFound} />
     </Switch>
