@@ -57,6 +57,12 @@ export default function Academics() {
   const { toast } = useToast();
   const [isClassDialogOpen, setIsClassDialogOpen] = useState(false);
   const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
+  const [isEditClassDialogOpen, setIsEditClassDialogOpen] = useState(false);
+  const [isViewClassDialogOpen, setIsViewClassDialogOpen] = useState(false);
+  const [isEditSubjectDialogOpen, setIsEditSubjectDialogOpen] = useState(false);
+  const [isViewSubjectDialogOpen, setIsViewSubjectDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const canManageAcademics = user && ['admin', 'principal'].includes(user.role);
   
   const { data: classesData, isLoading: classesLoading } = useQuery<{ classes: Class[] }>({
@@ -129,6 +135,26 @@ export default function Academics() {
         description: error.message || 'Failed to create subject',
         variant: 'destructive',
       });
+    },
+  });
+
+  const editClassForm = useForm<ClassFormData>({
+    resolver: zodResolver(classSchema),
+    defaultValues: {
+      name: '',
+      grade: 1,
+      section: '',
+      capacity: 40,
+      academicYear: new Date().getFullYear().toString(),
+    },
+  });
+
+  const editSubjectForm = useForm<SubjectFormData>({
+    resolver: zodResolver(subjectSchema),
+    defaultValues: {
+      name: '',
+      code: '',
+      description: '',
     },
   });
 
@@ -301,10 +327,30 @@ export default function Academics() {
                       {
                         key: 'actions',
                         header: 'Actions',
-                        cell: () => canManageAcademics ? (
+                        cell: (item) => canManageAcademics ? (
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">Edit</Button>
-                            <Button variant="ghost" size="sm">View</Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedClass(item);
+                                setIsEditClassDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-class-${item._id}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedClass(item);
+                                setIsViewClassDialogOpen(true);
+                              }}
+                              data-testid={`button-view-class-${item._id}`}
+                            >
+                              View
+                            </Button>
                           </div>
                         ) : null,
                       },
@@ -415,10 +461,30 @@ export default function Academics() {
                       {
                         key: 'actions',
                         header: 'Actions',
-                        cell: () => canManageAcademics ? (
+                        cell: (item) => canManageAcademics ? (
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">Edit</Button>
-                            <Button variant="ghost" size="sm">Assign</Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSubject(item);
+                                setIsEditSubjectDialogOpen(true);
+                              }}
+                              data-testid={`button-edit-subject-${item._id}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSubject(item);
+                                setIsViewSubjectDialogOpen(true);
+                              }}
+                              data-testid={`button-view-subject-${item._id}`}
+                            >
+                              View
+                            </Button>
                           </div>
                         ) : null,
                       },
@@ -430,6 +496,120 @@ export default function Academics() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* View Class Dialog */}
+        <Dialog open={isViewClassDialogOpen} onOpenChange={setIsViewClassDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>View Class Details</DialogTitle>
+            </DialogHeader>
+            {selectedClass && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Class Name</p>
+                  <p className="font-semibold">{selectedClass.name}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Grade</p>
+                    <p className="font-semibold">{selectedClass.grade}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Section</p>
+                    <p className="font-semibold">{selectedClass.section}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Capacity</p>
+                    <p className="font-semibold">{selectedClass.capacity} students</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Academic Year</p>
+                    <p className="font-semibold">{selectedClass.academicYear}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* View Subject Dialog */}
+        <Dialog open={isViewSubjectDialogOpen} onOpenChange={setIsViewSubjectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>View Subject Details</DialogTitle>
+            </DialogHeader>
+            {selectedSubject && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Subject Name</p>
+                  <p className="font-semibold">{selectedSubject.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Subject Code</p>
+                  <p className="font-semibold font-mono">{selectedSubject.code}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Description</p>
+                  <p className="font-semibold">{selectedSubject.description || 'N/A'}</p>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Class Dialog - Placeholder */}
+        <Dialog open={isEditClassDialogOpen} onOpenChange={setIsEditClassDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Class</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Class editing functionality requires backend API endpoints. Please contact your system administrator.
+              </p>
+              {selectedClass && (
+                <div className="space-y-2 p-4 bg-muted rounded-md">
+                  <p><strong>Class:</strong> {selectedClass.name}</p>
+                  <p><strong>Grade:</strong> {selectedClass.grade}</p>
+                  <p><strong>Section:</strong> {selectedClass.section}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditClassDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Subject Dialog - Placeholder */}
+        <Dialog open={isEditSubjectDialogOpen} onOpenChange={setIsEditSubjectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Subject</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Subject editing functionality requires backend API endpoints. Please contact your system administrator.
+              </p>
+              {selectedSubject && (
+                <div className="space-y-2 p-4 bg-muted rounded-md">
+                  <p><strong>Name:</strong> {selectedSubject.name}</p>
+                  <p><strong>Code:</strong> {selectedSubject.code}</p>
+                  <p><strong>Description:</strong> {selectedSubject.description || 'N/A'}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditSubjectDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

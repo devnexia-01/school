@@ -45,6 +45,46 @@ export default function Students() {
   
   const students = filteredStudents;
 
+  const escapeCsvField = (field: string): string => {
+    if (field == null) return '';
+    const str = String(field);
+    if (str.match(/^[=+\-@]/)) {
+      return `'${str}`;
+    }
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExport = () => {
+    const csvHeaders = ['Name', 'Admission Number', 'Class', 'Roll Number', 'Email', 'Phone', 'Status'];
+    const csvData = students.map((student: any) => [
+      escapeCsvField(student.name),
+      escapeCsvField(student.admissionNumber),
+      escapeCsvField(student.class),
+      escapeCsvField(student.rollNumber || ''),
+      escapeCsvField(student.email || ''),
+      escapeCsvField(student.phone || ''),
+      escapeCsvField(student.status)
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map((row: any[]) => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-7xl">
@@ -56,7 +96,7 @@ export default function Students() {
             <p className="text-muted-foreground mt-1">Manage student information and records</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-export-students">
+            <Button variant="outline" onClick={handleExport} data-testid="button-export-students">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>

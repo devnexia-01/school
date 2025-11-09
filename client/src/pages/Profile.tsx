@@ -28,11 +28,101 @@ export default function Profile() {
     enabled: !!isStudent,
   });
 
-  if (!isStudent) {
+  if (!isStudent && user) {
     return (
       <AppLayout>
-        <div className="p-6">
-          <p className="text-muted-foreground">Profile page is only available for students</p>
+        <div className="p-6 space-y-6 max-w-5xl">
+          <Breadcrumb items={[{ label: 'My Profile' }]} />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold" data-testid="text-profile-heading">Profile</h1>
+              <p className="text-muted-foreground mt-1">
+                Your account information
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation('/dashboard')}
+              data-testid="button-go-back"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Go Back
+            </Button>
+          </div>
+
+          <div className="flex justify-center">
+            <Avatar className="h-24 w-24">
+              <AvatarFallback className="text-2xl">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+
+          <Card data-testid="card-personal-info">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <UserCircle className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Personal Information</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your basic details and contact information
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <User className="h-5 w-5 text-muted-foreground mt-1" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      <p className="font-semibold" data-testid="text-user-name">
+                        {user.firstName} {user.lastName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <UserCircle className="h-5 w-5 text-muted-foreground mt-1" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Role</p>
+                      <p className="font-semibold capitalize" data-testid="text-user-role">
+                        {user.role}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground mt-1" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-semibold" data-testid="text-email">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(user as any).phone && (
+                    <div className="flex items-start gap-3">
+                      <Phone className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <p className="font-semibold" data-testid="text-phone">
+                          {(user as any).phone}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
