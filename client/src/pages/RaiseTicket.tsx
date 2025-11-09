@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import { LifeBuoy } from 'lucide-react';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { LifeBuoy, Loader2, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { DataTable } from '@/components/shared/DataTable';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 export default function RaiseTicket() {
   const [title, setTitle] = useState('');
@@ -16,6 +19,11 @@ export default function RaiseTicket() {
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('medium');
   const { toast } = useToast();
+
+  // Fetch user's ticket history
+  const { data: ticketsData, isLoading: isLoadingTickets } = useQuery<{ tickets: any[] }>({
+    queryKey: ['/api/support-tickets'],
+  });
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string; priority: string }) => {
@@ -25,6 +33,7 @@ export default function RaiseTicket() {
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
       toast({
         title: 'Ticket Created',
         description: 'Your support ticket has been submitted successfully. Our team will review it soon.',
@@ -61,8 +70,40 @@ export default function RaiseTicket() {
     });
   };
 
+  const tickets = ticketsData?.tickets || [];
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'default';
+      case 'in_progress':
+        return 'secondary';
+      case 'resolved':
+        return 'outline';
+      case 'closed':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return 'text-red-600';
+      case 'high':
+        return 'text-orange-600';
+      case 'medium':
+        return 'text-yellow-600';
+      case 'low':
+        return 'text-green-600';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
+
   return (
-    <div className="p-6 max-w-4xl space-y-6">
+    <div className="p-6 max-w-6xl space-y-6">
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <LifeBuoy className="h-6 w-6" />
@@ -157,6 +198,83 @@ export default function RaiseTicket() {
               {createTicketMutation.isPending ? 'Submitting...' : 'Submit Ticket'}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Ticket History</CardTitle>
+          <CardDescription>View all your previously submitted support tickets</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingTickets ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <DataTable
+              data={tickets}
+              emptyMessage="No tickets found. Submit your first support request above."
+              columns={[
+                {
+                  key: 'ticketId',
+                  header: 'Ticket ID',
+                  cell: (item: any) => (
+                    <span className="font-mono text-sm font-medium" data-testid={`text-ticket-id-${item.id}`}>
+                      {item.ticketId}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'title',
+                  header: 'Title',
+                  cell: (item: any) => (
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{item.category.replace('_', ' ')}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'priority',
+                  header: 'Priority',
+                  cell: (item: any) => (
+                    <span className={`capitalize font-medium ${getPriorityColor(item.priority)}`}>
+                      {item.priority}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: (item: any) => (
+                    <Badge variant={getStatusBadgeVariant(item.status)}>
+                      {item.status.replace('_', ' ')}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: 'createdAt',
+                  header: 'Created',
+                  cell: (item: any) => (
+                    <div className="text-sm">
+                      {format(new Date(item.createdAt), 'dd MMM yyyy')}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'assignedTo',
+                  header: 'Assigned To',
+                  cell: (item: any) => (
+                    <span className="text-sm text-muted-foreground">
+                      {item.assignedTo || 'Not assigned'}
+                    </span>
+                  ),
+                },
+              ]}
+              testId="ticket-history-table"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

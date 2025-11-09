@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { DataTable } from '@/components/shared/DataTable';
@@ -8,103 +9,90 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Building2, Users, GraduationCap } from 'lucide-react';
+import { Plus, Edit2, Building2, Users, GraduationCap, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { StatCard } from '@/components/shared/StatCard';
 import { formatCurrencyINR } from '@/lib/utils';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 export default function Tenants() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  
+  // Form state
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
 
   const canManageTenants = user && user.role === 'super_admin';
 
-  const tenants = [
-    {
-      id: '1',
-      name: 'Springfield High School',
-      code: 'SHS001',
-      email: 'admin@springfield.edu',
-      phone: '+1-555-0100',
-      address: '123 Education Lane, Springfield',
-      studentsCount: 610,
-      facultyCount: 45,
-      plan: 'Premium',
-      status: 'active',
-      subscription: {
-        startDate: '2024-01-01',
-        endDate: '2025-12-31',
-        price: 5000,
-      },
+  // Fetch tenants from API
+  const { data: tenantsData, isLoading } = useQuery<{ tenants: any[] }>({
+    queryKey: ['/api/tenants/with-stats'],
+    enabled: !!canManageTenants,
+  });
+
+  const tenants = (tenantsData as { tenants: any[] } | undefined)?.tenants || [];
+
+  // Mutation to add new tenant
+  const addTenantMutation = useMutation({
+    mutationFn: async (data: { name: string; code: string; email?: string; phone?: string; address?: string }) => {
+      return await apiRequest('/api/tenants', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
     },
-    {
-      id: '2',
-      name: 'Riverside Academy',
-      code: 'RA002',
-      email: 'admin@riverside.edu',
-      phone: '+1-555-0200',
-      address: '456 River Road, Riverside',
-      studentsCount: 450,
-      facultyCount: 35,
-      plan: 'Standard',
-      status: 'active',
-      subscription: {
-        startDate: '2024-02-01',
-        endDate: '2025-01-31',
-        price: 3000,
-      },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants/with-stats'] });
+      toast({
+        title: 'School Added',
+        description: 'New school has been added successfully.',
+      });
+      setIsAddDialogOpen(false);
+      // Reset form
+      setName('');
+      setCode('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
     },
-    {
-      id: '3',
-      name: 'Greenwood International',
-      code: 'GI003',
-      email: 'admin@greenwood.edu',
-      phone: '+1-555-0300',
-      address: '789 Green Avenue, Greenwood',
-      studentsCount: 820,
-      facultyCount: 62,
-      plan: 'Enterprise',
-      status: 'active',
-      subscription: {
-        startDate: '2023-09-01',
-        endDate: '2025-08-31',
-        price: 8000,
-      },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add school',
+        variant: 'destructive',
+      });
     },
-    {
-      id: '4',
-      name: 'Oakdale School',
-      code: 'OS004',
-      email: 'admin@oakdale.edu',
-      phone: '+1-555-0400',
-      address: '321 Oak Street, Oakdale',
-      studentsCount: 280,
-      facultyCount: 22,
-      plan: 'Basic',
-      status: 'trial',
-      subscription: {
-        startDate: '2025-01-15',
-        endDate: '2025-02-15',
-        price: 0,
-      },
-    },
-  ];
+  });
 
   const handleAddTenant = () => {
-    toast({
-      title: 'Tenant Added',
-      description: 'New school has been added successfully.',
+    if (!name || !code) {
+      toast({
+        title: 'Validation Error',
+        description: 'School name and code are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addTenantMutation.mutate({
+      name,
+      code,
+      email: email || undefined,
+      phone: phone || undefined,
+      address: address || undefined,
     });
-    setIsAddDialogOpen(false);
   };
 
   const totalSchools = tenants.length;
-  const totalStudents = tenants.reduce((sum, t) => sum + t.studentsCount, 0);
-  const totalFaculty = tenants.reduce((sum, t) => sum + t.facultyCount, 0);
-  const activeSchools = tenants.filter(t => t.status === 'active').length;
+  const totalStudents = tenants.reduce((sum: number, t: any) => sum + (t.studentsCount || 0), 0);
+  const totalFaculty = tenants.reduce((sum: number, t: any) => sum + (t.facultyCount || 0), 0);
+  const activeSchools = tenants.filter((t: any) => t.active).length;
 
   return (
     <AppLayout>
@@ -131,50 +119,72 @@ export default function Tenants() {
                 </DialogHeader>
                 <div className="grid grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="schoolName">School Name</Label>
-                    <Input id="schoolName" placeholder="Springfield High School" data-testid="input-school-name" />
+                    <Label htmlFor="schoolName">School Name *</Label>
+                    <Input 
+                      id="schoolName" 
+                      placeholder="Springfield High School" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      data-testid="input-school-name" 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="schoolCode">School Code</Label>
-                    <Input id="schoolCode" placeholder="SHS001" data-testid="input-school-code" />
+                    <Label htmlFor="schoolCode">School Code *</Label>
+                    <Input 
+                      id="schoolCode" 
+                      placeholder="SHS001" 
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      data-testid="input-school-code" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="admin@school.edu" data-testid="input-email" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="admin@school.edu" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      data-testid="input-email" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" placeholder="+1-555-0000" data-testid="input-phone" />
+                    <Input 
+                      id="phone" 
+                      placeholder="+1-555-0000" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      data-testid="input-phone" 
+                    />
                   </div>
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="address">Address</Label>
-                    <Input id="address" placeholder="123 Main Street" data-testid="input-address" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="plan">Subscription Plan</Label>
-                    <Select>
-                      <SelectTrigger data-testid="select-plan">
-                        <SelectValue placeholder="Select plan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="basic">Basic - {formatCurrencyINR(1000)}/year</SelectItem>
-                        <SelectItem value="standard">Standard - {formatCurrencyINR(3000)}/year</SelectItem>
-                        <SelectItem value="premium">Premium - {formatCurrencyINR(5000)}/year</SelectItem>
-                        <SelectItem value="enterprise">Enterprise - {formatCurrencyINR(8000)}/year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maxStudents">Max Students</Label>
-                    <Input id="maxStudents" type="number" placeholder="500" data-testid="input-max-students" />
+                    <Input 
+                      id="address" 
+                      placeholder="123 Main Street" 
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      data-testid="input-address" 
+                    />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAddDialogOpen(false)} 
+                    disabled={addTenantMutation.isPending}
+                    data-testid="button-cancel"
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleAddTenant} data-testid="button-save-tenant">
-                    Add School
+                  <Button 
+                    onClick={handleAddTenant} 
+                    disabled={addTenantMutation.isPending}
+                    data-testid="button-save-tenant"
+                  >
+                    {addTenantMutation.isPending ? 'Adding...' : 'Add School'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -211,92 +221,76 @@ export default function Tenants() {
             <CardTitle>All Schools</CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable
-              data={tenants}
-              emptyMessage="No schools found"
-              columns={[
-                {
-                  key: 'school',
-                  header: 'School',
-                  cell: (item) => (
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Building2 className="h-5 w-5 text-primary" />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <DataTable
+                data={tenants}
+                emptyMessage="No schools found"
+                columns={[
+                  {
+                    key: 'school',
+                    header: 'School',
+                    cell: (item: any) => (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Building2 className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">{item.code}</p>
+                        </div>
                       </div>
+                    ),
+                  },
+                  {
+                    key: 'contact',
+                    header: 'Contact',
+                    cell: (item: any) => (
                       <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{item.code}</p>
+                        <p className="font-medium">{item.email || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">{item.phone || 'N/A'}</p>
                       </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'contact',
-                  header: 'Contact',
-                  cell: (item) => (
-                    <div>
-                      <p className="font-medium">{item.email}</p>
-                      <p className="text-sm text-muted-foreground">{item.phone}</p>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'stats',
-                  header: 'Users',
-                  cell: (item) => (
-                    <div>
-                      <p className="font-medium">{item.studentsCount} Students</p>
-                      <p className="text-sm text-muted-foreground">{item.facultyCount} Faculty</p>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'plan',
-                  header: 'Plan',
-                  cell: (item) => (
-                    <div>
-                      <p className="font-medium">{item.plan}</p>
-                      <p className="text-sm text-muted-foreground">{formatCurrencyINR(item.subscription.price)}/year</p>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'subscription',
-                  header: 'Subscription',
-                  cell: (item) => (
-                    <div>
-                      <p className="text-sm">
-                        {new Date(item.subscription.startDate).toLocaleDateString()} -{' '}
-                        {new Date(item.subscription.endDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (item) => (
-                    <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
-                      {item.status}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'actions',
-                  header: 'Actions',
-                  cell: (item) => canManageTenants ? (
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" data-testid={`button-edit-tenant-${item.id}`}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" data-testid={`button-manage-tenant-${item.id}`}>
-                        Manage
-                      </Button>
-                    </div>
-                  ) : null,
-                },
-              ]}
-            />
+                    ),
+                  },
+                  {
+                    key: 'stats',
+                    header: 'Users',
+                    cell: (item: any) => (
+                      <div>
+                        <p className="font-medium">{item.studentsCount || 0} Students</p>
+                        <p className="text-sm text-muted-foreground">{item.facultyCount || 0} Faculty</p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (item: any) => (
+                      <Badge variant={item.active ? 'default' : 'secondary'}>
+                        {item.active ? 'active' : 'inactive'}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Actions',
+                    cell: (item: any) => canManageTenants ? (
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" data-testid={`button-edit-tenant-${item._id}`}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" data-testid={`button-manage-tenant-${item._id}`}>
+                          Manage
+                        </Button>
+                      </div>
+                    ) : null,
+                  },
+                ]}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
