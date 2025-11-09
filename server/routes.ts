@@ -956,6 +956,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/tenants/:id', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const tenant = await storage.updateTenant(id, updateData);
+      res.json(tenant);
+    } catch (error: any) {
+      console.error('Update tenant error:', error);
+      if (error.message === 'Tenant not found') {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Messages Routes ============
   app.get('/api/messages', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
@@ -1537,7 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/support-tickets', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
-      const tenantId = req.tenantId || null;
+      const tenantId = req.tenantId || undefined;
       const { title, description, category, priority } = req.body;
       
       if (!title || !description || !category) {

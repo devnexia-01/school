@@ -129,6 +129,12 @@ const menuItems: MenuItem[] = [
     path: '/communication',
     roles: ['admin', 'principal', 'faculty', 'student', 'parent'],
   },
+  {
+    title: 'Raise Ticket',
+    icon: LifeBuoy,
+    path: '/raise-ticket',
+    roles: ['admin', 'principal'],
+  },
 ];
 
 export function AppSidebar() {

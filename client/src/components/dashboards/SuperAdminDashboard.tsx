@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { formatCurrencyINR } from '@/lib/utils';
@@ -17,12 +18,14 @@ import { formatCurrencyINR } from '@/lib/utils';
 export function SuperAdminDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isChangePlanDialogOpen, setIsChangePlanDialogOpen] = useState(false);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState('');
   const [schoolCode, setSchoolCode] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [newPlan, setNewPlan] = useState('');
   const { toast } = useToast();
 
   const { data: tenantsData, isLoading } = useQuery<{ tenants: Array<any> }>({
@@ -57,7 +60,8 @@ export function SuperAdminDashboard() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants/with-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/superadmin/stats'] });
       toast({
         title: 'School Added',
         description: `${schoolName} has been added successfully`,
@@ -97,9 +101,68 @@ export function SuperAdminDashboard() {
     });
   };
 
+  const updateTenantMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest(`/api/tenants/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants/with-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tenants', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/superadmin/stats'] });
+      toast({
+        title: 'Success',
+        description: 'School updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update school',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleManageSchool = (schoolId: string) => {
     setSelectedSchoolId(schoolId);
     setIsManageDialogOpen(true);
+  };
+
+  const handleToggleStatus = () => {
+    if (!selectedSchoolData || !selectedSchoolId) return;
+    
+    const newStatus = selectedSchoolData.tenant.status === 'active' ? 'inactive' : 'active';
+    updateTenantMutation.mutate({
+      id: selectedSchoolId,
+      data: { status: newStatus },
+    });
+  };
+
+  const handleChangePlan = () => {
+    if (!newPlan || !selectedSchoolId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a plan',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    updateTenantMutation.mutate({
+      id: selectedSchoolId,
+      data: { plan: newPlan },
+    });
+    setIsChangePlanDialogOpen(false);
+    setNewPlan('');
+  };
+
+  const handleViewAnalytics = () => {
+    if (!selectedSchoolId) return;
+    
+    window.open(`/dashboard?tenantId=${selectedSchoolId}`, '_blank');
   };
 
   const schools = (tenantsData?.tenants || []).map(tenant => ({
@@ -355,15 +418,31 @@ export function SuperAdminDashboard() {
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-3">Actions</h3>
-                <div className="flex gap-2">
-                  <Button variant="outline" data-testid="button-view-analytics">
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleViewAnalytics}
+                    data-testid="button-view-analytics"
+                  >
                     View Analytics
                   </Button>
                   <Button 
                     variant={selectedSchoolData.tenant.status === 'active' ? 'destructive' : 'default'}
+                    onClick={handleToggleStatus}
+                    disabled={updateTenantMutation.isPending}
                     data-testid="button-toggle-status"
                   >
-                    {selectedSchoolData.tenant.status === 'active' ? 'Deactivate' : 'Activate'} School
+                    {updateTenantMutation.isPending ? 'Updating...' : `${selectedSchoolData.tenant.status === 'active' ? 'Deactivate' : 'Activate'} School`}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setNewPlan(selectedSchoolData.tenant.plan || '');
+                      setIsChangePlanDialogOpen(true);
+                    }}
+                    data-testid="button-change-plan"
+                  >
+                    Change Plan
                   </Button>
                 </div>
               </div>
@@ -381,6 +460,52 @@ export function SuperAdminDashboard() {
               data-testid="button-close-manage-dialog"
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isChangePlanDialogOpen} onOpenChange={setIsChangePlanDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Plan</DialogTitle>
+            <DialogDescription>
+              Select a new plan for the school
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="plan">Plan *</Label>
+              <Select value={newPlan} onValueChange={setNewPlan}>
+                <SelectTrigger data-testid="select-plan">
+                  <SelectValue placeholder="Select a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Basic">Basic</SelectItem>
+                  <SelectItem value="Standard">Standard</SelectItem>
+                  <SelectItem value="Premium">Premium</SelectItem>
+                  <SelectItem value="Enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsChangePlanDialogOpen(false);
+                setNewPlan('');
+              }}
+              data-testid="button-cancel-change-plan"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleChangePlan}
+              disabled={updateTenantMutation.isPending}
+              data-testid="button-submit-change-plan"
+            >
+              {updateTenantMutation.isPending ? 'Updating...' : 'Change Plan'}
             </Button>
           </DialogFooter>
         </DialogContent>

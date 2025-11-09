@@ -25,6 +25,7 @@ const LeaveManagement = lazy(() => import("@/pages/LeaveManagement"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const Tenants = lazy(() => import("@/pages/Tenants"));
 const SupportTickets = lazy(() => import("@/pages/SupportTickets"));
+const RaiseTicket = lazy(() => import("@/pages/RaiseTicket"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Preferences = lazy(() => import("@/pages/Preferences"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -135,6 +136,9 @@ function Router() {
       </Route>
       <Route path="/support-tickets">
         <ProtectedRoute component={SupportTickets} />
+      </Route>
+      <Route path="/raise-ticket">
+        <ProtectedRoute component={RaiseTicket} />
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={Profile} />

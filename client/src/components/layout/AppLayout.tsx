@@ -1,4 +1,4 @@
-import { ReactNode, useState, startTransition } from 'react';
+import { ReactNode, useState, startTransition, useEffect } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,36 +11,70 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/input';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { clearTenantContext } from '@/lib/queryClient';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
+function getTenantIdFromStorage(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const urlTenantId = params.get('tenantId');
+  return urlTenantId || sessionStorage.getItem('superadmin_viewing_tenant');
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewingTenantId, setViewingTenantId] = useState<string | null>(getTenantIdFromStorage);
   const { toast } = useToast();
 
-  const { data: notificationsData } = useQuery({
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentTenantId = getTenantIdFromStorage();
+      setViewingTenantId(prev => prev !== currentTenantId ? currentTenantId : prev);
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setViewingTenantId(getTenantIdFromStorage());
+  }, [location]);
+
+  const { data: viewingTenantData } = useQuery<{ tenant: any; stats: any }>({
+    queryKey: ['/api/tenants', viewingTenantId],
+    enabled: !!viewingTenantId && user?.role === 'super_admin',
+  });
+
+  const { data: notificationsData } = useQuery<{ notifications: any[] }>({
     queryKey: ['/api/notifications'],
     enabled: !!user,
   });
 
-  const { data: notificationsCount } = useQuery({
+  const { data: notificationsCount } = useQuery<{ count: number }>({
     queryKey: ['/api/notifications/unread-count'],
     enabled: !!user,
   });
 
   const notifications = notificationsData?.notifications || [];
   const unreadCount = notificationsCount?.count || 0;
+
+  const handleExitTenantView = () => {
+    clearTenantContext();
+    setViewingTenantId(null);
+    startTransition(() => setLocation('/dashboard'));
+    window.location.reload();
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +193,29 @@ export function AppLayout({ children }: AppLayoutProps) {
               </DropdownMenu>
             </div>
           </header>
+
+          {viewingTenantId && user?.role === 'super_admin' && (
+            <div className="flex items-center justify-between gap-4 bg-primary px-6 py-3 text-primary-foreground" data-testid="banner-tenant-context">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-primary-foreground text-primary">
+                  Viewing School
+                </Badge>
+                <span className="font-medium">
+                  {viewingTenantData?.tenant?.name || 'Loading...'}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExitTenantView}
+                className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                data-testid="button-exit-tenant-view"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Exit School View
+              </Button>
+            </div>
+          )}
 
           <main className="flex-1 overflow-auto">
             {children}

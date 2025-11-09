@@ -64,6 +64,7 @@ export interface IStorage {
   getTenant(id: string): Promise<Tenant | undefined>;
   getAllTenants(): Promise<Tenant[]>;
   createTenant(tenant: InsertTenant): Promise<Tenant>;
+  updateTenant(id: string, tenantData: Partial<InsertTenant>): Promise<Tenant>;
   
   // Students
   getStudent(id: string, tenantId?: string): Promise<Student | undefined>;
@@ -256,6 +257,18 @@ export class DatabaseStorage implements IStorage {
 
   async createTenant(insertTenant: InsertTenant): Promise<Tenant> {
     const tenant = await TenantModel.create(insertTenant);
+    return toPlainObject(tenant);
+  }
+
+  async updateTenant(id: string, tenantData: Partial<InsertTenant>): Promise<Tenant> {
+    const tenant = await TenantModel.findByIdAndUpdate(
+      id,
+      tenantData,
+      { new: true, runValidators: true }
+    );
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
     return toPlainObject(tenant);
   }
 
