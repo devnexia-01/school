@@ -8,6 +8,25 @@ A comprehensive multi-tenant School ERP (Enterprise Resource Planning) system bu
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Critical Bug Fixes (November 9, 2025)
+- **Support Ticket Permissions Fixed**: Resolved 403 Forbidden error preventing admin users from viewing their ticket history
+  - Modified GET `/api/support-tickets` route to allow both 'super_admin' and 'admin' roles
+  - Implemented role-based filtering: super_admin sees all tickets, admin sees only their own tickets (filtered by createdBy)
+  - Updated getSupportTickets() storage method to accept optional userId parameter for secure filtering
+  - No cross-tenant data leaks - proper tenant isolation maintained
+- **Add School Error Handling Improved**: Replaced generic 500 errors with user-friendly messages
+  - Enhanced POST `/api/tenants` route with MongoDB duplicate key error detection (error.code === 11000)
+  - Returns 409 Conflict status with clear messages ("School code already exists" or "School name already exists")
+  - Users now get actionable feedback when creating schools with duplicate information
+- **Preferences Feature Removed Completely**: Eliminated all preferences-related code from the application
+  - Deleted client/src/pages/Preferences.tsx page
+  - Removed all Preferences routes from App.tsx
+  - Removed Preferences menu items from AppLayout.tsx sidebar
+  - Removed duplicate Preferences API routes from server/routes.ts
+  - No orphaned code references remain in the codebase
+
 ## System Architecture
 
 ### Frontend Architecture
