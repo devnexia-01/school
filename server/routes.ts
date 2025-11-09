@@ -347,6 +347,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/students/:id', authenticateToken, requireRole(['admin', 'principal']), tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.tenantId!;
+      const updatedStudent = await storage.updateStudent(id, tenantId, req.body);
+      res.json(updatedStudent);
+    } catch (error) {
+      console.error('Update student error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Classes Routes ============
   app.get('/api/classes', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
@@ -371,6 +383,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/classes/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.tenantId!;
+      const updatedClass = await storage.updateClass(id, tenantId, req.body);
+      res.json(updatedClass);
+    } catch (error) {
+      console.error('Update class error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Subjects Routes ============
   app.get('/api/subjects', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
@@ -391,6 +415,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(subject);
     } catch (error) {
       console.error('Create subject error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/subjects/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'principal']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const tenantId = req.tenantId!;
+      const updatedSubject = await storage.updateSubject(id, tenantId, req.body);
+      res.json(updatedSubject);
+    } catch (error) {
+      console.error('Update subject error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -609,6 +645,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============ Fee Payments Routes ============
+  app.get('/api/fee-payments/all', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenants = await storage.getAllTenants();
+      let allPayments: any[] = [];
+      
+      for (const tenant of tenants) {
+        const payments = await storage.getFeePaymentsByTenant(tenant._id, 500);
+        allPayments = [...allPayments, ...payments.map(payment => ({
+          ...payment,
+          tenantId: tenant._id,
+          tenantName: tenant.name,
+        }))];
+      }
+      
+      const { school, status, startDate, endDate } = req.query;
+      
+      let filteredPayments = allPayments;
+      
+      if (school) {
+        filteredPayments = filteredPayments.filter(p => p.tenantId === school);
+      }
+      
+      if (status) {
+        filteredPayments = filteredPayments.filter(p => p.status === status);
+      }
+      
+      if (startDate) {
+        filteredPayments = filteredPayments.filter(p => new Date(p.paymentDate) >= new Date(startDate as string));
+      }
+      
+      if (endDate) {
+        filteredPayments = filteredPayments.filter(p => new Date(p.paymentDate) <= new Date(endDate as string));
+      }
+      
+      filteredPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+      
+      res.json({ payments: filteredPayments });
+    } catch (error) {
+      console.error('Get all fee payments error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/fee-payments', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
@@ -831,6 +910,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ tenants: tenantsData });
     } catch (error) {
       console.error('Get tenants error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/tenants/:id', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const tenant = await storage.getTenant(id);
+      
+      if (!tenant) {
+        return res.status(404).json({ error: 'Tenant not found' });
+      }
+      
+      const studentsCount = await storage.getStudentsCount(id);
+      
+      const payments = await storage.getFeePaymentsByTenant(id);
+      const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
+      
+      res.json({
+        tenant,
+        stats: {
+          studentsCount,
+          totalRevenue,
+          paymentsCount: payments.length,
+        },
+      });
+    } catch (error) {
+      console.error('Get tenant details error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1394,6 +1501,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error('Delete leave request error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ============ Support Tickets Routes ============
+  app.get('/api/support-tickets', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tickets = await storage.getSupportTickets();
+      
+      const formattedTickets = tickets.map((ticket: any) => ({
+        id: ticket._id,
+        ticketId: `TKT-${ticket._id.substring(0, 6).toUpperCase()}`,
+        school: ticket.tenantId?.name || 'Unknown',
+        tenantId: ticket.tenantId?._id || null,
+        title: ticket.title,
+        description: ticket.description,
+        category: ticket.category,
+        priority: ticket.priority,
+        status: ticket.status,
+        createdBy: ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : 'Unknown',
+        createdByEmail: ticket.createdBy?.email || '',
+        createdAt: ticket.createdAt,
+        assignedTo: ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : null,
+        resolvedAt: ticket.resolvedAt,
+      }));
+      
+      res.json({ tickets: formattedTickets });
+    } catch (error) {
+      console.error('Get support tickets error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/support-tickets', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const tenantId = req.tenantId || null;
+      const { title, description, category, priority } = req.body;
+      
+      if (!title || !description || !category) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      const ticket = await storage.createSupportTicket({
+        tenantId,
+        createdBy: userId,
+        title,
+        description,
+        category,
+        priority: priority || 'medium',
+      });
+      
+      res.status(201).json(ticket);
+    } catch (error) {
+      console.error('Create support ticket error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      
+      const ticket = await storage.updateSupportTicket(id, updateData);
+      res.json(ticket);
+    } catch (error) {
+      console.error('Update support ticket error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id/approve', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const ticket = await storage.updateSupportTicket(id, {
+        status: 'in_progress',
+        assignedTo: req.user!.id,
+      });
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error('Approve support ticket error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id/reject', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const ticket = await storage.updateSupportTicket(id, {
+        status: 'closed',
+      });
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error('Reject support ticket error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id/resolve', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const ticket = await storage.updateSupportTicket(id, {
+        status: 'resolved',
+        resolvedAt: new Date(),
+      });
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error('Resolve support ticket error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

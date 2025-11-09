@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
@@ -158,12 +158,88 @@ export default function Academics() {
     },
   });
 
+  const updateClassMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ClassFormData }) =>
+      apiRequest(`/api/classes/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/classes'] });
+      toast({ title: 'Success', description: 'Class updated successfully' });
+      setIsEditClassDialogOpen(false);
+      setSelectedClass(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update class',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateSubjectMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SubjectFormData }) =>
+      apiRequest(`/api/subjects/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/subjects'] });
+      toast({ title: 'Success', description: 'Subject updated successfully' });
+      setIsEditSubjectDialogOpen(false);
+      setSelectedSubject(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update subject',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (selectedClass && isEditClassDialogOpen) {
+      editClassForm.reset({
+        name: selectedClass.name,
+        grade: selectedClass.grade,
+        section: selectedClass.section,
+        capacity: selectedClass.capacity,
+        academicYear: selectedClass.academicYear,
+      });
+    }
+  }, [selectedClass, isEditClassDialogOpen]);
+
+  useEffect(() => {
+    if (selectedSubject && isEditSubjectDialogOpen) {
+      editSubjectForm.reset({
+        name: selectedSubject.name,
+        code: selectedSubject.code,
+        description: selectedSubject.description || '',
+      });
+    }
+  }, [selectedSubject, isEditSubjectDialogOpen]);
+
   const onClassSubmit = (data: ClassFormData) => {
     createClassMutation.mutate(data);
   };
 
   const onSubjectSubmit = (data: SubjectFormData) => {
     createSubjectMutation.mutate(data);
+  };
+
+  const onEditClassSubmit = (data: ClassFormData) => {
+    if (selectedClass) {
+      updateClassMutation.mutate({ id: selectedClass._id, data });
+    }
+  };
+
+  const onEditSubjectSubmit = (data: SubjectFormData) => {
+    if (selectedSubject) {
+      updateSubjectMutation.mutate({ id: selectedSubject._id, data });
+    }
   };
 
   return (
@@ -559,55 +635,151 @@ export default function Academics() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Class Dialog - Placeholder */}
+        {/* Edit Class Dialog */}
         <Dialog open={isEditClassDialogOpen} onOpenChange={setIsEditClassDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Class</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Class editing functionality requires backend API endpoints. Please contact your system administrator.
-              </p>
-              {selectedClass && (
-                <div className="space-y-2 p-4 bg-muted rounded-md">
-                  <p><strong>Class:</strong> {selectedClass.name}</p>
-                  <p><strong>Grade:</strong> {selectedClass.grade}</p>
-                  <p><strong>Section:</strong> {selectedClass.section}</p>
+            <Form {...editClassForm}>
+              <form onSubmit={editClassForm.handleSubmit(onEditClassSubmit)} className="space-y-4">
+                <FormField
+                  control={editClassForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Class Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Class 1A" {...field} data-testid="input-edit-class-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editClassForm.control}
+                    name="grade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Grade</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g., 1" {...field} data-testid="input-edit-grade" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editClassForm.control}
+                    name="section"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Section</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., A" {...field} data-testid="input-edit-section" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditClassDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
+                <FormField
+                  control={editClassForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capacity</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 40" {...field} data-testid="input-edit-capacity" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editClassForm.control}
+                  name="academicYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Academic Year</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 2025" {...field} data-testid="input-edit-academic-year" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditClassDialogOpen(false)} data-testid="button-cancel-edit-class">
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateClassMutation.isPending} data-testid="button-submit-edit-class">
+                    {updateClassMutation.isPending ? 'Updating...' : 'Update Class'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
 
-        {/* Edit Subject Dialog - Placeholder */}
+        {/* Edit Subject Dialog */}
         <Dialog open={isEditSubjectDialogOpen} onOpenChange={setIsEditSubjectDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Subject</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Subject editing functionality requires backend API endpoints. Please contact your system administrator.
-              </p>
-              {selectedSubject && (
-                <div className="space-y-2 p-4 bg-muted rounded-md">
-                  <p><strong>Name:</strong> {selectedSubject.name}</p>
-                  <p><strong>Code:</strong> {selectedSubject.code}</p>
-                  <p><strong>Description:</strong> {selectedSubject.description || 'N/A'}</p>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditSubjectDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
+            <Form {...editSubjectForm}>
+              <form onSubmit={editSubjectForm.handleSubmit(onEditSubjectSubmit)} className="space-y-4">
+                <FormField
+                  control={editSubjectForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Mathematics" {...field} data-testid="input-edit-subject-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editSubjectForm.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., MATH101" {...field} data-testid="input-edit-subject-code" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editSubjectForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Subject description" {...field} data-testid="input-edit-subject-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditSubjectDialogOpen(false)} data-testid="button-cancel-edit-subject">
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateSubjectMutation.isPending} data-testid="button-submit-edit-subject">
+                    {updateSubjectMutation.isPending ? 'Updating...' : 'Update Subject'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>

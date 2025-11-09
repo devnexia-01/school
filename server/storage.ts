@@ -19,6 +19,7 @@ import {
   TransportRouteModel,
   PayrollModel,
   LeaveRequestModel,
+  SupportTicketModel,
   type User,
   type InsertUser,
   type Tenant,
@@ -49,6 +50,8 @@ import {
   type Notification,
   type Payroll,
   type LeaveRequest,
+  type SupportTicket,
+  type InsertSupportTicket,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -69,15 +72,18 @@ export interface IStorage {
   getStudentsWithDetailsOptimized(tenantId: string, limit?: number, offset?: number): Promise<any[]>;
   getStudentsCount(tenantId: string): Promise<number>;
   createStudent(student: InsertStudent): Promise<Student>;
+  updateStudent(id: string, tenantId: string, studentData: Partial<InsertStudent>): Promise<Student>;
   
   // Classes
   getClass(id: string, tenantId?: string): Promise<Class | undefined>;
   getClassesByTenant(tenantId: string): Promise<Class[]>;
   createClass(classData: InsertClass): Promise<Class>;
+  updateClass(id: string, tenantId: string, classData: Partial<InsertClass>): Promise<Class>;
   
   // Subjects
   getSubjectsByTenant(tenantId: string): Promise<Subject[]>;
   createSubject(subject: InsertSubject): Promise<Subject>;
+  updateSubject(id: string, tenantId: string, subjectData: Partial<InsertSubject>): Promise<Subject>;
   
   // Attendance
   getAttendanceByDate(classId: string, date: string, tenantId: string): Promise<Attendance[]>;
@@ -113,6 +119,12 @@ export interface IStorage {
   
   // User Profile
   updateUserProfile(userId: string, profileData: Partial<InsertUser>): Promise<User>;
+  
+  // Support Tickets
+  getSupportTickets(): Promise<SupportTicket[]>;
+  getSupportTicket(id: string): Promise<SupportTicket | undefined>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  updateSupportTicket(id: string, ticketData: Partial<SupportTicket>): Promise<SupportTicket>;
   
   // Dashboard Stats
   getFacultyCount(tenantId: string): Promise<number>;
@@ -306,6 +318,18 @@ export class DatabaseStorage implements IStorage {
     return toPlainObject(student);
   }
 
+  async updateStudent(id: string, tenantId: string, studentData: Partial<InsertStudent>): Promise<Student> {
+    const updatedStudent = await StudentModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      studentData,
+      { new: true }
+    ).lean();
+    if (!updatedStudent) {
+      throw new Error('Student not found');
+    }
+    return toPlainObject(updatedStudent);
+  }
+
   // Classes
   async getClass(id: string, tenantId?: string): Promise<Class | undefined> {
     const query = tenantId ? { _id: id, tenantId } : { _id: id };
@@ -323,6 +347,18 @@ export class DatabaseStorage implements IStorage {
     return toPlainObject(classData);
   }
 
+  async updateClass(id: string, tenantId: string, classData: Partial<InsertClass>): Promise<Class> {
+    const updatedClass = await ClassModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      classData,
+      { new: true }
+    ).lean();
+    if (!updatedClass) {
+      throw new Error('Class not found');
+    }
+    return toPlainObject(updatedClass);
+  }
+
   // Subjects
   async getSubjectsByTenant(tenantId: string): Promise<Subject[]> {
     const subjects = await SubjectModel.find({ tenantId }).lean();
@@ -332,6 +368,18 @@ export class DatabaseStorage implements IStorage {
   async createSubject(insertSubject: InsertSubject): Promise<Subject> {
     const subject = await SubjectModel.create(insertSubject);
     return toPlainObject(subject);
+  }
+
+  async updateSubject(id: string, tenantId: string, subjectData: Partial<InsertSubject>): Promise<Subject> {
+    const updatedSubject = await SubjectModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      subjectData,
+      { new: true }
+    ).lean();
+    if (!updatedSubject) {
+      throw new Error('Subject not found');
+    }
+    return toPlainObject(updatedSubject);
   }
 
   // Attendance
@@ -1502,6 +1550,51 @@ export class DatabaseStorage implements IStorage {
     });
     
     return Array.from(teachersMap.values());
+  }
+  
+  // Support Tickets
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    const tickets = await SupportTicketModel.find()
+      .populate('tenantId', 'name')
+      .populate('createdBy', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    return tickets.map(toPlainObject);
+  }
+  
+  async getSupportTicket(id: string): Promise<SupportTicket | undefined> {
+    const ticket = await SupportTicketModel.findById(id)
+      .populate('tenantId', 'name')
+      .populate('createdBy', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName')
+      .lean();
+    
+    return ticket ? toPlainObject(ticket) : undefined;
+  }
+  
+  async createSupportTicket(insertTicket: InsertSupportTicket): Promise<SupportTicket> {
+    const ticket = await SupportTicketModel.create(insertTicket);
+    return toPlainObject(ticket.toObject());
+  }
+  
+  async updateSupportTicket(id: string, ticketData: Partial<SupportTicket>): Promise<SupportTicket> {
+    const ticket = await SupportTicketModel.findByIdAndUpdate(
+      id,
+      ticketData,
+      { new: true }
+    )
+    .populate('tenantId', 'name')
+    .populate('createdBy', 'firstName lastName email')
+    .populate('assignedTo', 'firstName lastName')
+    .lean();
+    
+    if (!ticket) {
+      throw new Error('Support ticket not found');
+    }
+    
+    return toPlainObject(ticket);
   }
 }
 

@@ -10,6 +10,8 @@ const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Students = lazy(() => import("@/pages/Students"));
 const AddStudent = lazy(() => import("@/pages/AddStudent"));
+const StudentDetail = lazy(() => import("@/pages/StudentDetail"));
+const StudentEdit = lazy(() => import("@/pages/StudentEdit"));
 const Attendance = lazy(() => import("@/pages/Attendance"));
 const Academics = lazy(() => import("@/pages/Academics"));
 const Fees = lazy(() => import("@/pages/Fees"));
@@ -88,6 +90,12 @@ function Router() {
       </Route>
       <Route path="/students/add">
         <ProtectedRoute component={AddStudent} />
+      </Route>
+      <Route path="/students/:id/edit">
+        <ProtectedRoute component={StudentEdit} />
+      </Route>
+      <Route path="/students/:id">
+        <ProtectedRoute component={StudentDetail} />
       </Route>
       <Route path="/attendance">
         <ProtectedRoute component={Attendance} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { DataTable } from '@/components/shared/DataTable';
@@ -6,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, MessageSquare } from 'lucide-react';
+import { Eye, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function SupportTickets() {
   const { user } = useAuth();
@@ -22,84 +24,94 @@ export default function SupportTickets() {
 
   const canManageTickets = user && user.role === 'super_admin';
 
-  const tickets = [
-    {
-      id: '1',
-      ticketId: 'TKT-001',
-      school: 'Springfield High School',
-      title: 'Unable to add new students',
-      description: 'Getting an error when trying to add new student records through the student management module.',
-      category: 'Technical',
-      priority: 'high',
-      status: 'open',
-      createdBy: 'Admin User',
-      createdAt: '2025-01-26 09:30 AM',
-      assignedTo: null,
+  const { data: ticketsData, isLoading } = useQuery<{ tickets: any[] }>({
+    queryKey: ['/api/support-tickets'],
+    enabled: canManageTickets,
+  });
+
+  const tickets = ticketsData?.tickets || [];
+
+  const approveMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      return apiRequest(`/api/support-tickets/${ticketId}/approve`, { method: 'PATCH' });
     },
-    {
-      id: '2',
-      ticketId: 'TKT-002',
-      school: 'Riverside Academy',
-      title: 'Request for additional faculty licenses',
-      description: 'We need to add 5 more faculty members but have reached our subscription limit.',
-      category: 'Billing',
-      priority: 'medium',
-      status: 'in_progress',
-      createdBy: 'Principal',
-      createdAt: '2025-01-25 02:15 PM',
-      assignedTo: 'Support Team',
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
+      toast({
+        title: 'Success',
+        description: 'Ticket has been approved and assigned.',
+      });
     },
-    {
-      id: '3',
-      ticketId: 'TKT-003',
-      school: 'Greenwood International',
-      title: 'Fee payment gateway not working',
-      description: 'Parents are reporting that they cannot make online payments. The payment gateway returns an error.',
-      category: 'Technical',
-      priority: 'urgent',
-      status: 'open',
-      createdBy: 'Finance Manager',
-      createdAt: '2025-01-27 11:45 AM',
-      assignedTo: null,
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to approve ticket',
+        variant: 'destructive',
+      });
     },
-    {
-      id: '4',
-      ticketId: 'TKT-004',
-      school: 'Oakdale School',
-      title: 'Question about exam module features',
-      description: 'Need clarification on how to set up different grading scales for different subjects.',
-      category: 'Support',
-      priority: 'low',
-      status: 'resolved',
-      createdBy: 'Admin',
-      createdAt: '2025-01-24 10:00 AM',
-      assignedTo: 'Support Team',
-      resolvedAt: '2025-01-25 03:30 PM',
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      return apiRequest(`/api/support-tickets/${ticketId}/reject`, { method: 'PATCH' });
     },
-  ];
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
+      toast({
+        title: 'Success',
+        description: 'Ticket has been rejected and closed.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reject ticket',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      return apiRequest(`/api/support-tickets/${ticketId}/resolve`, { method: 'PATCH' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
+      toast({
+        title: 'Success',
+        description: 'Ticket has been marked as resolved.',
+      });
+      setIsViewDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to resolve ticket',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleViewTicket = (ticket: any) => {
     setSelectedTicket(ticket);
     setIsViewDialogOpen(true);
   };
 
-  const handleAssignTicket = (ticket: any) => {
-    toast({
-      title: 'Ticket Assigned',
-      description: `Ticket ${ticket.ticketId} has been assigned to support team.`,
-    });
+  const handleApproveTicket = (ticket: any) => {
+    approveMutation.mutate(ticket.id);
+  };
+
+  const handleRejectTicket = (ticket: any) => {
+    rejectMutation.mutate(ticket.id);
   };
 
   const handleResolveTicket = (ticket: any) => {
-    toast({
-      title: 'Ticket Resolved',
-      description: `Ticket ${ticket.ticketId} has been marked as resolved.`,
-    });
+    resolveMutation.mutate(ticket.id);
   };
 
   const openTickets = tickets.filter(t => t.status === 'open');
   const inProgressTickets = tickets.filter(t => t.status === 'in_progress');
-  const resolvedTickets = tickets.filter(t => t.status === 'resolved');
+  const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed');
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -124,10 +136,41 @@ export default function SupportTickets() {
         return 'default';
       case 'resolved':
         return 'secondary';
+      case 'closed':
+        return 'outline';
       default:
         return 'outline';
     }
   };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return formatDistanceToNow(date, { addSuffix: true });
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (!canManageTickets) {
+    return (
+      <AppLayout>
+        <div className="p-6 space-y-6 max-w-7xl">
+          <p className="text-center text-muted-foreground">You don't have permission to view this page.</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -159,7 +202,7 @@ export default function SupportTickets() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold">{tickets.length}</p>
+                <p className="text-3xl font-bold" data-testid="text-total-tickets">{tickets.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">Total Tickets</p>
               </div>
             </CardContent>
@@ -167,7 +210,7 @@ export default function SupportTickets() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-red-600">{openTickets.length}</p>
+                <p className="text-3xl font-bold text-red-600" data-testid="text-open-tickets">{openTickets.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">Open</p>
               </div>
             </CardContent>
@@ -175,7 +218,7 @@ export default function SupportTickets() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">{inProgressTickets.length}</p>
+                <p className="text-3xl font-bold text-blue-600" data-testid="text-in-progress-tickets">{inProgressTickets.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">In Progress</p>
               </div>
             </CardContent>
@@ -183,7 +226,7 @@ export default function SupportTickets() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">{resolvedTickets.length}</p>
+                <p className="text-3xl font-bold text-green-600" data-testid="text-resolved-tickets">{resolvedTickets.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">Resolved</p>
               </div>
             </CardContent>
@@ -213,7 +256,7 @@ export default function SupportTickets() {
                       header: 'Ticket',
                       cell: (item) => (
                         <div>
-                          <p className="font-medium">{item.ticketId}</p>
+                          <p className="font-medium" data-testid={`text-ticket-id-${item.id}`}>{item.ticketId}</p>
                           <p className="text-sm text-muted-foreground">{item.title}</p>
                         </div>
                       ),
@@ -241,7 +284,7 @@ export default function SupportTickets() {
                       key: 'status',
                       header: 'Status',
                       cell: (item) => (
-                        <Badge variant={getStatusColor(item.status)}>
+                        <Badge variant={getStatusColor(item.status)} data-testid={`badge-status-${item.id}`}>
                           {item.status.replace('_', ' ')}
                         </Badge>
                       ),
@@ -251,7 +294,7 @@ export default function SupportTickets() {
                       header: 'Created',
                       cell: (item) => (
                         <div>
-                          <p className="text-sm">{item.createdAt}</p>
+                          <p className="text-sm">{formatDate(item.createdAt)}</p>
                           <p className="text-xs text-muted-foreground">by {item.createdBy}</p>
                         </div>
                       ),
@@ -259,7 +302,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => canManageTickets ? (
+                      cell: (item) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -270,27 +313,40 @@ export default function SupportTickets() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {item.status === 'open' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAssignTicket(item)}
-                              data-testid={`button-assign-ticket-${item.id}`}
-                            >
-                              Assign
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleApproveTicket(item)}
+                                disabled={approveMutation.isPending}
+                                data-testid={`button-approve-ticket-${item.id}`}
+                              >
+                                {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRejectTicket(item)}
+                                disabled={rejectMutation.isPending}
+                                data-testid={`button-reject-ticket-${item.id}`}
+                              >
+                                {rejectMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
+                              </Button>
+                            </>
                           )}
                           {item.status === 'in_progress' && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleResolveTicket(item)}
+                              disabled={resolveMutation.isPending}
                               data-testid={`button-resolve-ticket-${item.id}`}
                             >
-                              Resolve
+                              {resolveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resolve'}
                             </Button>
                           )}
                         </div>
-                      ) : null,
+                      ),
                     },
                   ]}
                 />
@@ -340,12 +396,12 @@ export default function SupportTickets() {
                     {
                       key: 'created',
                       header: 'Created',
-                      cell: (item) => item.createdAt,
+                      cell: (item) => formatDate(item.createdAt),
                     },
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => canManageTickets ? (
+                      cell: (item) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -358,13 +414,14 @@ export default function SupportTickets() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleAssignTicket(item)}
-                            data-testid={`button-assign-open-${item.id}`}
+                            onClick={() => handleApproveTicket(item)}
+                            disabled={approveMutation.isPending}
+                            data-testid={`button-approve-open-${item.id}`}
                           >
-                            Assign
+                            {approveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Approve'}
                           </Button>
                         </div>
-                      ) : null,
+                      ),
                     },
                   ]}
                 />
@@ -414,7 +471,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => canManageTickets ? (
+                      cell: (item) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -428,12 +485,13 @@ export default function SupportTickets() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleResolveTicket(item)}
+                            disabled={resolveMutation.isPending}
                             data-testid={`button-resolve-progress-${item.id}`}
                           >
-                            Resolve
+                            {resolveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Resolve'}
                           </Button>
                         </div>
-                      ) : null,
+                      ),
                     },
                   ]}
                 />
@@ -469,7 +527,7 @@ export default function SupportTickets() {
                     {
                       key: 'resolved',
                       header: 'Resolved',
-                      cell: (item) => item.resolvedAt || '-',
+                      cell: (item) => item.resolvedAt ? formatDate(item.resolvedAt) : '-',
                     },
                     {
                       key: 'actions',
@@ -497,7 +555,7 @@ export default function SupportTickets() {
             <DialogHeader>
               <DialogTitle>Ticket Details - {selectedTicket?.ticketId}</DialogTitle>
               <DialogDescription>
-                Created by {selectedTicket?.createdBy} on {selectedTicket?.createdAt}
+                Created by {selectedTicket?.createdBy} {selectedTicket?.createdAt && formatDate(selectedTicket.createdAt)}
               </DialogDescription>
             </DialogHeader>
             {selectedTicket && (
@@ -544,12 +602,13 @@ export default function SupportTickets() {
               <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} data-testid="button-close-ticket-dialog">
                 Close
               </Button>
-              {selectedTicket?.status !== 'resolved' && canManageTickets && (
-                <Button onClick={() => {
-                  handleResolveTicket(selectedTicket);
-                  setIsViewDialogOpen(false);
-                }} data-testid="button-resolve-from-dialog">
-                  Mark as Resolved
+              {selectedTicket?.status !== 'resolved' && selectedTicket?.status !== 'closed' && (
+                <Button 
+                  onClick={() => handleResolveTicket(selectedTicket)} 
+                  disabled={resolveMutation.isPending}
+                  data-testid="button-resolve-from-dialog"
+                >
+                  {resolveMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark as Resolved'}
                 </Button>
               )}
             </DialogFooter>

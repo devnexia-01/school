@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { StatCard } from '@/components/shared/StatCard';
 import { DataTable } from '@/components/shared/DataTable';
+import { PaymentTracking } from '@/components/dashboards/PaymentTracking';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, IndianRupee, TrendingUp, Plus } from 'lucide-react';
+import { Building2, Users, IndianRupee, TrendingUp, Plus, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +16,8 @@ import { formatCurrencyINR } from '@/lib/utils';
 
 export function SuperAdminDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState('');
   const [schoolCode, setSchoolCode] = useState('');
   const [email, setEmail] = useState('');
@@ -32,6 +35,18 @@ export function SuperAdminDashboard() {
     totalMRR: number;
   }>({
     queryKey: ['/api/dashboard/superadmin/stats'],
+  });
+
+  const { data: selectedSchoolData, isLoading: isSchoolDetailsLoading } = useQuery<{
+    tenant: any;
+    stats: {
+      studentsCount: number;
+      totalRevenue: number;
+      paymentsCount: number;
+    };
+  }>({
+    queryKey: ['/api/tenants', selectedSchoolId],
+    enabled: !!selectedSchoolId && isManageDialogOpen,
   });
 
   const createSchoolMutation = useMutation({
@@ -80,6 +95,11 @@ export function SuperAdminDashboard() {
       phone,
       address,
     });
+  };
+
+  const handleManageSchool = (schoolId: string) => {
+    setSelectedSchoolId(schoolId);
+    setIsManageDialogOpen(true);
   };
 
   const schools = (tenantsData?.tenants || []).map(tenant => ({
@@ -247,8 +267,13 @@ export function SuperAdminDashboard() {
               {
                 key: 'actions',
                 header: 'Actions',
-                cell: () => (
-                  <Button variant="ghost" size="sm">
+                cell: (item) => (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleManageSchool(item.id)}
+                    data-testid={`button-manage-school-${item.id}`}
+                  >
                     Manage
                   </Button>
                 ),
@@ -258,6 +283,108 @@ export function SuperAdminDashboard() {
           />
         </CardContent>
       </Card>
+
+      <PaymentTracking />
+
+      <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Manage School</DialogTitle>
+            <DialogDescription>
+              View and manage school details and statistics
+            </DialogDescription>
+          </DialogHeader>
+          {isSchoolDetailsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : selectedSchoolData ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <Label>School Name</Label>
+                  <p className="mt-1 font-medium" data-testid="text-manage-school-name">{selectedSchoolData.tenant.name}</p>
+                </div>
+                <div>
+                  <Label>School Code</Label>
+                  <p className="mt-1 font-medium">{selectedSchoolData.tenant.code}</p>
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <p className="mt-1 text-sm text-muted-foreground">{selectedSchoolData.tenant.email}</p>
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <p className="mt-1 text-sm text-muted-foreground">{selectedSchoolData.tenant.phone || 'N/A'}</p>
+                </div>
+                <div className="col-span-2">
+                  <Label>Address</Label>
+                  <p className="mt-1 text-sm text-muted-foreground">{selectedSchoolData.tenant.address || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Statistics</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold" data-testid="text-manage-students-count">{selectedSchoolData.stats.studentsCount}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Students</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold" data-testid="text-manage-revenue">{formatCurrencyINR(selectedSchoolData.stats.totalRevenue)}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Total Revenue</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{selectedSchoolData.stats.paymentsCount}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Payments</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Actions</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" data-testid="button-view-analytics">
+                    View Analytics
+                  </Button>
+                  <Button 
+                    variant={selectedSchoolData.tenant.status === 'active' ? 'destructive' : 'default'}
+                    data-testid="button-toggle-status"
+                  >
+                    {selectedSchoolData.tenant.status === 'active' ? 'Deactivate' : 'Activate'} School
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">No data available</p>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsManageDialogOpen(false);
+                setSelectedSchoolId(null);
+              }}
+              data-testid="button-close-manage-dialog"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

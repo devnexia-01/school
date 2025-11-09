@@ -624,6 +624,20 @@ export type LeaveRequest = {
   createdAt: Date;
 };
 
+export type SupportTicket = {
+  _id: string;
+  tenantId?: string;
+  createdBy: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  assignedTo?: string;
+  resolvedAt?: Date;
+  createdAt: Date;
+};
+
 // Insert types (omit _id and fields with defaults)
 export type InsertTenant = Omit<Tenant, '_id' | 'createdAt' | 'active'> & { active?: boolean };
 export type InsertUser = Omit<User, '_id' | 'createdAt' | 'active'> & { active?: boolean };
@@ -638,6 +652,7 @@ export type InsertFeePayment = Omit<FeePayment, '_id' | 'createdAt'>;
 export type InsertAnnouncement = Omit<Announcement, '_id' | 'createdAt' | 'publishedAt'> & { publishedAt?: Date };
 export type InsertClassSubject = Omit<ClassSubject, '_id' | 'createdAt'>;
 export type InsertUserPreference = Omit<UserPreference, '_id' | 'createdAt' | 'updatedAt'>;
+export type InsertSupportTicket = Omit<SupportTicket, '_id' | 'createdAt' | 'status'> & { status?: string };
 
 // Zod schemas for validation
 export const insertTenantSchema = z.object({

@@ -198,16 +198,16 @@ export default function Students() {
                   header: 'Actions',
                   cell: (item: any) => (
                     <div className="flex items-center gap-2">
-                      <Link href={`/students/${item.id}`}>
-                        <Button variant="ghost" size="sm" data-testid={`button-view-${item.id}`}>
+                      <Link href={`/students/${item._id}`}>
+                        <Button variant="ghost" size="sm" data-testid={`button-view-${item._id}`}>
                           View
                         </Button>
                       </Link>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => startTransition(() => setLocation(`/students/${item.id}/edit`))}
-                        data-testid={`button-edit-${item.id}`}
+                        onClick={() => startTransition(() => setLocation(`/students/${item._id}/edit`))}
+                        data-testid={`button-edit-${item._id}`}
                       >
                         Edit
                       </Button>
