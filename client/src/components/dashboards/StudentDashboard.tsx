@@ -76,7 +76,16 @@ export function StudentDashboard() {
     .slice(0, 4);
 
   const recentResults = results.slice(0, 3);
-  const filteredAnnouncements = announcements;
+  
+  // Filter announcements by user role
+  const filteredAnnouncements = announcements.filter((announcement: any) => {
+    // Show announcements with no targetRole (for all users)
+    if (!announcement.targetRole) {
+      return true;
+    }
+    // Show announcements that match the user's role
+    return announcement.targetRole === user?.role;
+  });
 
   const calculateAttendance = () => 94.2;
   const calculateGPA = () => {

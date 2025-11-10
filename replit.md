@@ -10,6 +10,28 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Feature Enhancements & Bug Fixes (November 10, 2025)
+- **Attendance Export**: Added CSV export functionality to Attendance page
+  - Export button added with proper data-testid attributes for testing
+  - CSV generation includes student name, roll number, class, date, and status
+  - Instant download with proper filename format
+- **Communication Role-Based Filtering**: Implemented announcement filtering by user role
+  - Announcements now filtered based on targetRole field
+  - Users only see announcements for their role or announcements with no targetRole (for all users)
+  - Applied to both Communication page and dashboard notifications
+- **Faculty Dashboard Navigation**: Fixed Salary Slip button redirect
+  - Wrapped Salary Slip card in Link component to navigate to /payroll page
+  - Maintains consistent navigation pattern with other dashboard cards
+- **Student Dashboard Notifications**: Enhanced notification bell functionality
+  - Added role-based filtering to announcements in notification popover
+  - Only relevant announcements displayed based on user role
+  - Consistent filtering logic across all pages
+- **Verified Working Features**: Confirmed the following features are operational
+  - Students page Export/View/Edit functionality already working
+  - Faculty Payroll filtering using /api/payroll/my endpoint
+  - Profile page works correctly for all roles (admin, faculty, student)
+  - Real-time data synchronization via React Query cache invalidation
+
 ### Critical Bug Fixes (November 9, 2025)
 - **Support Ticket Permissions Fixed**: Resolved 403 Forbidden error preventing admin users from viewing their ticket history
   - Modified GET `/api/support-tickets` route to allow both 'super_admin' and 'admin' roles

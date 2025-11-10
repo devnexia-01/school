@@ -37,8 +37,18 @@ export default function Communication() {
     queryKey: ['/api/messages'],
   });
 
-  const announcements = announcementsData?.announcements || [];
+  const allAnnouncements = announcementsData?.announcements || [];
   const messages = messagesData?.messages || [];
+  
+  // Filter announcements by user role
+  const announcements = allAnnouncements.filter((announcement) => {
+    // Show announcements with no targetRole (for all users)
+    if (!announcement.targetRole) {
+      return true;
+    }
+    // Show announcements that match the user's role
+    return announcement.targetRole === user?.role;
+  });
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async () => {

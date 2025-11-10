@@ -92,19 +92,21 @@ export function FacultyDashboard() {
           </Card>
         </Link>
 
-        <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-salary-slip">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-500/10 rounded-lg">
-                <Wallet className="h-6 w-6 text-purple-500" />
+        <Link href="/payroll">
+          <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-salary-slip">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-500/10 rounded-lg">
+                  <Wallet className="h-6 w-6 text-purple-500" />
+                </div>
+                <div>
+                  <p className="font-semibold">Salary Slip</p>
+                  <p className="text-sm text-muted-foreground">View & download</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold">Salary Slip</p>
-                <p className="text-sm text-muted-foreground">View & download</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Link href="/leave-management">
           <Card className="hover-elevate cursor-pointer transition-all">

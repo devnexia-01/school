@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Calendar as CalendarIcon, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Save, Calendar as CalendarIcon, CheckCircle, XCircle, Clock, AlertCircle, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
@@ -158,6 +158,43 @@ export default function Attendance() {
 
   const handleSave = () => {
     saveMutation.mutate();
+  };
+
+  const escapeCsvField = (field: string): string => {
+    if (field == null) return '';
+    const str = String(field);
+    if (str.match(/^[=+\-@]/)) {
+      return `'${str}`;
+    }
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExport = () => {
+    const csvHeaders = ['Roll Number', 'Student Name', 'Date', 'Status'];
+    const csvData = attendanceData.map((student) => [
+      escapeCsvField(student.rollNumber),
+      escapeCsvField(student.name),
+      escapeCsvField(format(selectedDate, 'yyyy-MM-dd')),
+      escapeCsvField(student.status)
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map((row) => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `attendance-${format(selectedDate, 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const stats = {
@@ -351,10 +388,16 @@ export default function Attendance() {
             <h1 className="text-3xl font-semibold">Attendance Management</h1>
             <p className="text-muted-foreground mt-1">Track daily student attendance</p>
           </div>
-          <Button onClick={handleSave} disabled={saveMutation.isPending || attendanceData.length === 0} data-testid="button-save-attendance">
-            <Save className="mr-2 h-4 w-4" />
-            {saveMutation.isPending ? 'Saving...' : 'Save Attendance'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={attendanceData.length === 0} data-testid="button-export-attendance">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button onClick={handleSave} disabled={saveMutation.isPending || attendanceData.length === 0} data-testid="button-save-attendance">
+              <Save className="mr-2 h-4 w-4" />
+              {saveMutation.isPending ? 'Saving...' : 'Save Attendance'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
