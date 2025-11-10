@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -127,6 +127,28 @@ export default function LeaveManagement() {
     },
   });
 
+  const withdrawLeaveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/leave-requests/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Leave Withdrawn',
+        description: 'Your leave request has been withdrawn successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/leave-requests'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to withdraw leave request.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleApplyLeave = (data: LeaveFormData) => {
     applyLeaveMutation.mutate(data);
   };
@@ -137,6 +159,12 @@ export default function LeaveManagement() {
 
   const handleRejectLeave = (leave: LeaveRequest) => {
     updateLeaveStatusMutation.mutate({ id: leave._id, status: 'rejected' });
+  };
+
+  const handleWithdrawLeave = (leave: LeaveRequest) => {
+    if (confirm('Are you sure you want to withdraw this leave request?')) {
+      withdrawLeaveMutation.mutate(leave._id);
+    }
   };
 
   const calculateDays = (startDate: string, endDate: string) => {
@@ -530,6 +558,22 @@ export default function LeaveManagement() {
                         key: 'applied',
                         header: 'Applied On',
                         cell: (item) => new Date(item.createdAt).toLocaleDateString(),
+                      },
+                      {
+                        key: 'actions',
+                        header: 'Actions',
+                        cell: (item) => item.status === 'pending' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWithdrawLeave(item)}
+                            data-testid={`button-withdraw-${item._id}`}
+                            disabled={withdrawLeaveMutation.isPending}
+                          >
+                            <XCircle className="h-4 w-4 mr-1 text-red-600" />
+                            Withdraw
+                          </Button>
+                        ) : null,
                       },
                     ]}
                   />

@@ -10,24 +10,11 @@ import { formatCurrencyINR } from '@/lib/utils';
 
 export function FacultyDashboard() {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
-  const todaysClasses = [
-    { id: '1', time: '09:00 AM', class: 'Grade 10-A', subject: 'Mathematics', room: 'Room 201', status: 'upcoming' },
-    { id: '2', time: '10:30 AM', class: 'Grade 9-B', subject: 'Mathematics', room: 'Room 201', status: 'upcoming' },
-    { id: '3', time: '01:00 PM', class: 'Grade 11-A', subject: 'Statistics', room: 'Room 305', status: 'upcoming' },
-    { id: '4', time: '02:30 PM', class: 'Grade 12-A', subject: 'Calculus', room: 'Room 201', status: 'upcoming' },
-  ];
-
-  const pendingGrading = [
-    { id: '1', assignment: 'Chapter 5 Quiz', class: 'Grade 10-A', submitted: 42, total: 45, dueDate: 'Today' },
-    { id: '2', assignment: 'Mid-term Exam', class: 'Grade 11-A', submitted: 38, total: 40, dueDate: 'Tomorrow' },
-    { id: '3', assignment: 'Homework Assignment 12', class: 'Grade 9-B', submitted: 35, total: 38, dueDate: 'Jan 18' },
-  ];
-
-  const recentMessages = [
-    { id: '1', from: 'Mrs. Johnson (Parent)', subject: 'Question about assignment', time: '2 hours ago' },
-    { id: '2', from: 'Principal', subject: 'Faculty meeting reminder', time: '5 hours ago' },
-    { id: '3', from: 'Admin', subject: 'Updated exam schedule', time: '1 day ago' },
-  ];
+  
+  // TODO: Fetch real data from backend APIs
+  const todaysClasses: any[] = [];
+  const pendingGrading: any[] = [];
+  const recentMessages: any[] = [];
 
   return (
     <div className="p-6 space-y-8 max-w-7xl">

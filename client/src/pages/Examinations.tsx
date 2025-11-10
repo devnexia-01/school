@@ -22,7 +22,9 @@ export default function Examinations() {
   const { toast } = useToast();
   const isStudent = user?.role === 'student';
   const canManageExams = user && ['admin', 'principal', 'super_admin'].includes(user.role);
+  const isTeacher = user?.role === 'faculty';
   const [isAddExamDialogOpen, setIsAddExamDialogOpen] = useState(false);
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [examForm, setExamForm] = useState({
     name: '',
     type: '',
@@ -43,8 +45,25 @@ export default function Examinations() {
     enabled: isStudent,
   });
 
+  const { data: examDetailsData, isLoading: isExamDetailsLoading } = useQuery<{
+    name: string;
+    type: string;
+    startDate: string;
+    endDate: string;
+    stats?: {
+      totalAttempts: number;
+      uniqueStudents: number;
+      averageMarks: number;
+    };
+    results?: any[];
+  }>({
+    queryKey: ['/api/exams', selectedExamId],
+    enabled: !!selectedExamId && (canManageExams || isTeacher),
+  });
+
   const exams = examsData?.exams || [];
   const results = resultsData?.results || [];
+  const examDetails = selectedExamId ? examDetailsData : null;
 
   const createExamMutation = useMutation({
     mutationFn: async () => {
@@ -300,8 +319,12 @@ export default function Examinations() {
                       key: 'name',
                       header: 'Exam Name',
                       cell: (item: any) => (
-                        <div>
-                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                        <div
+                          onClick={() => (canManageExams || isTeacher) && setSelectedExamId(item._id)}
+                          className={(canManageExams || isTeacher) ? "cursor-pointer hover-elevate p-2 rounded-md transition-all" : ""}
+                          data-testid={`exam-name-${item._id}`}
+                        >
+                          <p className="font-medium">
                             {item.name}
                           </p>
                           <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -436,8 +459,12 @@ export default function Examinations() {
                       key: 'name',
                       header: 'Exam Name',
                       cell: (item: any) => (
-                        <div>
-                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                        <div
+                          onClick={() => (canManageExams || isTeacher) && setSelectedExamId(item._id)}
+                          className={(canManageExams || isTeacher) ? "cursor-pointer hover-elevate p-2 rounded-md transition-all" : ""}
+                          data-testid={`exam-name-${item._id}`}
+                        >
+                          <p className="font-medium">
                             {item.name}
                           </p>
                           <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -501,8 +528,12 @@ export default function Examinations() {
                       key: 'name',
                       header: 'Exam Name',
                       cell: (item: any) => (
-                        <div>
-                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                        <div
+                          onClick={() => (canManageExams || isTeacher) && setSelectedExamId(item._id)}
+                          className={(canManageExams || isTeacher) ? "cursor-pointer hover-elevate p-2 rounded-md transition-all" : ""}
+                          data-testid={`exam-name-${item._id}`}
+                        >
+                          <p className="font-medium">
                             {item.name}
                           </p>
                           <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -566,8 +597,12 @@ export default function Examinations() {
                       key: 'name',
                       header: 'Exam Name',
                       cell: (item: any) => (
-                        <div>
-                          <p className="font-medium" data-testid={`exam-name-${item._id}`}>
+                        <div
+                          onClick={() => (canManageExams || isTeacher) && setSelectedExamId(item._id)}
+                          className={(canManageExams || isTeacher) ? "cursor-pointer hover-elevate p-2 rounded-md transition-all" : ""}
+                          data-testid={`exam-name-${item._id}`}
+                        >
+                          <p className="font-medium">
                             {item.name}
                           </p>
                           <p className="text-sm text-muted-foreground">{item.type}</p>
@@ -729,6 +764,116 @@ export default function Examinations() {
             </>
           )}
         </Tabs>
+
+        {/* Exam Details Dialog */}
+        <Dialog open={!!selectedExamId} onOpenChange={() => setSelectedExamId(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" data-testid="dialog-exam-details">
+            <DialogHeader>
+              <DialogTitle>Exam Details</DialogTitle>
+              <DialogDescription>View exam information and student attempts</DialogDescription>
+            </DialogHeader>
+            {isExamDetailsLoading ? (
+              <div className="py-8 text-center text-muted-foreground">Loading exam details...</div>
+            ) : examDetails ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Exam Name</p>
+                    <p className="font-medium" data-testid="text-exam-name">{examDetails.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Type</p>
+                    <p className="font-medium capitalize" data-testid="text-exam-type">{examDetails.type?.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Start Date</p>
+                    <p className="font-medium" data-testid="text-start-date">
+                      {examDetails.startDate ? format(new Date(examDetails.startDate), 'MMM dd, yyyy') : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">End Date</p>
+                    <p className="font-medium" data-testid="text-end-date">
+                      {examDetails.endDate ? format(new Date(examDetails.endDate), 'MMM dd, yyyy') : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {examDetails.stats && (
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Attempts</p>
+                      <p className="text-2xl font-bold" data-testid="text-total-attempts">{examDetails.stats.totalAttempts}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Unique Students</p>
+                      <p className="text-2xl font-bold" data-testid="text-unique-students">{examDetails.stats.uniqueStudents}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Average Marks</p>
+                      <p className="text-2xl font-bold" data-testid="text-average-marks">{examDetails.stats.averageMarks}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-semibold mb-3">Student Attempts</h3>
+                  {examDetails.results && examDetails.results.length > 0 ? (
+                    <DataTable
+                      data={examDetails.results}
+                      emptyMessage="No attempts yet"
+                      columns={[
+                        {
+                          key: 'student',
+                          header: 'Student',
+                          cell: (item: any) => (
+                            <div>
+                              <p className="font-medium">
+                                {item.studentId?.firstName} {item.studentId?.lastName}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{item.studentId?.rollNumber || 'N/A'}</p>
+                            </div>
+                          ),
+                        },
+                        {
+                          key: 'subject',
+                          header: 'Subject',
+                          cell: (item: any) => item.subjectId?.name || 'N/A',
+                        },
+                        {
+                          key: 'marks',
+                          header: 'Marks',
+                          cell: (item: any) => (
+                            <span className="font-medium">
+                              {item.marksObtained}/{item.totalMarks}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: 'percentage',
+                          header: 'Percentage',
+                          cell: (item: any) => {
+                            const percentage = ((item.marksObtained / item.totalMarks) * 100).toFixed(2);
+                            return <span>{percentage}%</span>;
+                          },
+                        },
+                        {
+                          key: 'grade',
+                          header: 'Grade',
+                          cell: (item: any) => <Badge variant="outline">{item.grade || 'N/A'}</Badge>,
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">No student attempts recorded yet</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">Exam not found</div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

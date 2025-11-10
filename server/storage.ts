@@ -487,13 +487,44 @@ export class DatabaseStorage implements IStorage {
 
   // Exam Results
   async getResultsByExam(examId: string, tenantId: string): Promise<ExamResult[]> {
-    const results = await ExamResultModel.find({ examId, tenantId }).lean();
+    const results = await ExamResultModel.find({ examId, tenantId })
+      .populate('studentId', 'firstName lastName email rollNumber')
+      .populate('subjectId', 'name code')
+      .lean();
     return results.map(toPlainObject);
   }
 
   async createExamResult(insertResult: InsertExamResult): Promise<ExamResult> {
     const result = await ExamResultModel.create(insertResult);
     return toPlainObject(result);
+  }
+
+  async getExamById(examId: string, tenantId: string): Promise<any> {
+    const exam = await ExamModel.findOne({ _id: examId, tenantId }).lean();
+    if (!exam) {
+      throw new Error('Exam not found');
+    }
+    
+    const results = await ExamResultModel.find({ examId, tenantId })
+      .populate('studentId', 'firstName lastName email rollNumber')
+      .populate('subjectId', 'name code')
+      .lean();
+    
+    const totalAttempts = results.length;
+    const uniqueStudents = new Set(results.map((r: any) => r.studentId?._id?.toString())).size;
+    const averageMarks = results.length > 0
+      ? results.reduce((sum: number, r: any) => sum + (r.marksObtained || 0), 0) / results.length
+      : 0;
+    
+    return {
+      ...toPlainObject(exam),
+      results: results.map(toPlainObject),
+      stats: {
+        totalAttempts,
+        uniqueStudents,
+        averageMarks: Math.round(averageMarks * 100) / 100,
+      },
+    };
   }
 
   // Fee Structures
@@ -1472,12 +1503,25 @@ export class DatabaseStorage implements IStorage {
     return toPlainObject(leaveRequest);
   }
   
-  async deleteLeaveRequest(leaveId: string, tenantId: string): Promise<void> {
-    const result = await LeaveRequestModel.findOneAndDelete({ _id: leaveId, tenantId });
+  async deleteLeaveRequest(leaveId: string, tenantId: string, userId?: string): Promise<void> {
+    // First, find the leave request to check ownership and status
+    const leaveRequest = await LeaveRequestModel.findOne({ _id: leaveId, tenantId });
     
-    if (!result) {
+    if (!leaveRequest) {
       throw new Error('Leave request not found or access denied');
     }
+    
+    // If userId is provided, ensure user owns this leave request
+    if (userId && leaveRequest.userId.toString() !== userId) {
+      throw new Error('You can only withdraw your own leave requests');
+    }
+    
+    // Only allow deleting/withdrawing pending leaves
+    if (leaveRequest.status !== 'pending') {
+      throw new Error('Only pending leave requests can be withdrawn');
+    }
+    
+    await LeaveRequestModel.findOneAndDelete({ _id: leaveId, tenantId });
   }
   
   // Student Attendance

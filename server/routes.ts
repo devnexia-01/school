@@ -584,6 +584,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/exams/:id', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const { id } = req.params;
+      const exam = await storage.getExamById(id, tenantId);
+      res.json(exam);
+    } catch (error) {
+      console.error('Get exam by id error:', error);
+      res.status(404).json({ error: error instanceof Error ? error.message : 'Exam not found' });
+    }
+  });
+
   app.post('/api/exams', authenticateToken, tenantIsolation, requireRole(['admin', 'principal', 'super_admin']), async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
@@ -1412,13 +1424,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/leave-requests/:id', authenticateToken, tenantIsolation, async (req: AuthRequest, res) => {
     try {
       const tenantId = req.tenantId!;
+      const userId = req.user!.id;
       const { id } = req.params;
       
-      await storage.deleteLeaveRequest(id, tenantId);
+      // Only allow deleting own pending leave requests
+      await storage.deleteLeaveRequest(id, tenantId, userId);
       res.json({ success: true });
     } catch (error) {
       console.error('Delete leave request error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to withdraw leave request' });
     }
   });
 
