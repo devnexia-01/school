@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
@@ -17,6 +17,8 @@ import { StatCard } from '@/components/shared/StatCard';
 import { TrendingUp, Users, CreditCard } from 'lucide-react';
 import { formatCurrencyINR } from '@/lib/utils';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +33,7 @@ import {
 export default function Payroll() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const receiptRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState('');
   const [generateMonth, setGenerateMonth] = useState('');
   const [generateYear, setGenerateYear] = useState(new Date().getFullYear().toString());
@@ -232,6 +235,44 @@ export default function Payroll() {
   const handleViewSlip = (record: any) => {
     setSelectedPayroll(record);
     setIsReceiptDialogOpen(true);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!receiptRef.current || !selectedPayroll) return;
+
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
+
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      
+      const fileName = `payroll-${selectedPayroll.employeeName || 'receipt'}-${selectedPayroll.month || ''}-${selectedPayroll.year || Date.now()}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: 'Success',
+        description: 'Payroll receipt downloaded successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF',
+        variant: 'destructive',
+      });
+    }
   };
 
   const totalPayroll = payrollRecords.reduce((sum, record) => sum + record.netSalary, 0);
@@ -674,7 +715,7 @@ export default function Payroll() {
               </DialogDescription>
             </DialogHeader>
             {selectedPayroll && (
-              <div className="space-y-6">
+              <div ref={receiptRef} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-md">
                   <div>
                     <p className="text-sm text-muted-foreground">Employee Name</p>
@@ -733,12 +774,7 @@ export default function Payroll() {
               <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)} data-testid="button-close-receipt">
                 Close
               </Button>
-              <Button onClick={() => {
-                toast({
-                  title: 'Download Started',
-                  description: 'Payroll receipt download started',
-                });
-              }} data-testid="button-download-receipt">
+              <Button onClick={handleDownloadPDF} data-testid="button-download-receipt">
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
