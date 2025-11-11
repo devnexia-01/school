@@ -177,6 +177,44 @@ export default function Faculty() {
     }
   };
 
+  const escapeCsvField = (field: string): string => {
+    if (field == null) return '';
+    const str = String(field);
+    if (str.match(/^[=+\-@]/)) {
+      return `'${str}`;
+    }
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExportFaculty = () => {
+    const csvHeaders = ['Name', 'Email', 'Phone', 'Role', 'Status'];
+    const csvData = filteredFaculty.map((faculty: any) => [
+      escapeCsvField(faculty.name),
+      escapeCsvField(faculty.email),
+      escapeCsvField(faculty.phone || ''),
+      escapeCsvField(faculty.role),
+      escapeCsvField(faculty.active ? 'Active' : 'Inactive')
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map((row: any[]) => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `faculty-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6 max-w-7xl">
@@ -188,7 +226,7 @@ export default function Faculty() {
             <p className="text-muted-foreground mt-1">Manage faculty members and their information</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" data-testid="button-export-faculty">
+            <Button variant="outline" onClick={handleExportFaculty} data-testid="button-export-faculty">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>

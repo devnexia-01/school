@@ -47,6 +47,9 @@ export default function Fees() {
   const { toast } = useToast();
   const isStudent = user?.role === 'student';
   const [isAddFeeDialogOpen, setIsAddFeeDialogOpen] = useState(false);
+  const [isEditFeeDialogOpen, setIsEditFeeDialogOpen] = useState(false);
+  const [isDeleteFeeDialogOpen, setIsDeleteFeeDialogOpen] = useState(false);
+  const [selectedFeeStructure, setSelectedFeeStructure] = useState<FeeStructure | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -135,6 +138,63 @@ export default function Fees() {
     },
   });
 
+  const updateFeeStructureMutation = useMutation({
+    mutationFn: async (data: { id: string; updateData: any }) => {
+      return await apiRequest(`/api/fee-structures/${data.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data.updateData),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Fee structure updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/fee-structures'] });
+      setIsEditFeeDialogOpen(false);
+      setSelectedFeeStructure(null);
+      setFeeForm({
+        name: '',
+        amount: '',
+        classId: '',
+        academicYear: new Date().getFullYear().toString(),
+        dueDate: '',
+        description: '',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update fee structure',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteFeeStructureMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/fee-structures/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Fee structure deleted successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/fee-structures'] });
+      setIsDeleteFeeDialogOpen(false);
+      setSelectedFeeStructure(null);
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete fee structure',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleCreateFeeStructure = () => {
     if (!feeForm.name || !feeForm.amount || !feeForm.classId) {
       toast({
@@ -145,6 +205,100 @@ export default function Fees() {
       return;
     }
     createFeeStructureMutation.mutate();
+  };
+
+  const handleEditFeeStructure = (feeStructure: FeeStructure) => {
+    setSelectedFeeStructure(feeStructure);
+    setFeeForm({
+      name: feeStructure.name,
+      amount: feeStructure.amount.toString(),
+      classId: feeStructure.classId,
+      academicYear: new Date().getFullYear().toString(),
+      dueDate: feeStructure.dueDate || '',
+      description: feeStructure.description || '',
+    });
+    setIsEditFeeDialogOpen(true);
+  };
+
+  const handleUpdateFeeStructure = () => {
+    if (!selectedFeeStructure || !feeForm.name || !feeForm.amount || !feeForm.classId) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateFeeStructureMutation.mutate({
+      id: selectedFeeStructure._id,
+      updateData: {
+        ...feeForm,
+        amount: parseFloat(feeForm.amount),
+      },
+    });
+  };
+
+  const handleDeleteFeeStructure = (feeStructure: FeeStructure) => {
+    setSelectedFeeStructure(feeStructure);
+    setIsDeleteFeeDialogOpen(true);
+  };
+
+  const confirmDeleteFeeStructure = () => {
+    if (!selectedFeeStructure) return;
+    deleteFeeStructureMutation.mutate(selectedFeeStructure._id);
+  };
+
+  const escapeCsvField = (field: string): string => {
+    if (field == null) return '';
+    const str = String(field);
+    if (str.match(/^[=+\-@]/)) {
+      return `'${str}`;
+    }
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const handleExportFees = () => {
+    const csvHeaders = isStudent 
+      ? ['Fee Type', 'Amount', 'Payment Date', 'Payment Method', 'Status', 'Receipt']
+      : ['Student', 'Class', 'Amount', 'Date', 'Status', 'Receipt'];
+    
+    const csvData = feePayments.map((payment: any) => 
+      isStudent ? [
+        escapeCsvField(payment.feeStructureId?.name || 'Fee Payment'),
+        escapeCsvField(payment.amount?.toString() || ''),
+        escapeCsvField(payment.paymentDate ? format(new Date(payment.paymentDate), 'MMM dd, yyyy') : 'N/A'),
+        escapeCsvField(payment.paymentMode || 'N/A'),
+        escapeCsvField(payment.status),
+        escapeCsvField(payment.receiptNumber || '-')
+      ] : [
+        escapeCsvField(payment.student),
+        escapeCsvField(payment.class),
+        escapeCsvField(payment.amount?.toString() || ''),
+        escapeCsvField(payment.date),
+        escapeCsvField(payment.status),
+        escapeCsvField(payment.receipt || '-')
+      ]
+    );
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map((row: any[]) => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = isStudent 
+      ? `fee-statement-${new Date().toISOString().split('T')[0]}.csv`
+      : `fee-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const totalCollected = feePayments
@@ -174,7 +328,7 @@ export default function Fees() {
               {isStudent ? 'View your fee payment history and pending fees' : 'Track fee collection and payment status'}
             </p>
           </div>
-          <Button variant="outline" data-testid="button-export-fees">
+          <Button variant="outline" onClick={handleExportFees} data-testid="button-export-fees">
             <Download className="mr-2 h-4 w-4" />
             Export {isStudent ? 'Fee Statement' : 'Report'}
           </Button>
@@ -513,10 +667,24 @@ export default function Fees() {
                       ...(!isStudent ? [{
                         key: 'actions',
                         header: 'Actions',
-                        cell: () => (
+                        cell: (item: FeeStructure) => (
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">Edit</Button>
-                            <Button variant="ghost" size="sm">Delete</Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditFeeStructure(item)}
+                              data-testid={`button-edit-fee-${item._id}`}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteFeeStructure(item)}
+                              data-testid={`button-delete-fee-${item._id}`}
+                            >
+                              Delete
+                            </Button>
                           </div>
                         ),
                       }] : []),
@@ -527,6 +695,118 @@ export default function Fees() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={isEditFeeDialogOpen} onOpenChange={setIsEditFeeDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Fee Structure</DialogTitle>
+              <DialogDescription>Update fee structure details</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-fee-name">Fee Name *</Label>
+                <Input
+                  id="edit-fee-name"
+                  placeholder="e.g., Tuition Fee, Lab Fee"
+                  value={feeForm.name}
+                  onChange={(e) => setFeeForm({ ...feeForm, name: e.target.value })}
+                  data-testid="input-edit-fee-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-class">Class *</Label>
+                <Select value={feeForm.classId} onValueChange={(value) => setFeeForm({ ...feeForm, classId: value })}>
+                  <SelectTrigger data-testid="select-edit-class">
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls._id} value={cls._id}>
+                        Class {cls.grade} {cls.section}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-amount">Amount *</Label>
+                  <Input
+                    id="edit-amount"
+                    type="number"
+                    placeholder="0"
+                    value={feeForm.amount}
+                    onChange={(e) => setFeeForm({ ...feeForm, amount: e.target.value })}
+                    data-testid="input-edit-amount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-academic-year">Academic Year</Label>
+                  <Input
+                    id="edit-academic-year"
+                    placeholder="2025"
+                    value={feeForm.academicYear}
+                    onChange={(e) => setFeeForm({ ...feeForm, academicYear: e.target.value })}
+                    data-testid="input-edit-academic-year"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-due-date">Due Date</Label>
+                <Input
+                  id="edit-due-date"
+                  type="date"
+                  value={feeForm.dueDate}
+                  onChange={(e) => setFeeForm({ ...feeForm, dueDate: e.target.value })}
+                  data-testid="input-edit-due-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-fee-description">Description</Label>
+                <Textarea
+                  id="edit-fee-description"
+                  placeholder="Optional description"
+                  rows={2}
+                  value={feeForm.description}
+                  onChange={(e) => setFeeForm({ ...feeForm, description: e.target.value })}
+                  data-testid="textarea-edit-description"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditFeeDialogOpen(false)} data-testid="button-cancel-edit-fee">
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateFeeStructure} disabled={updateFeeStructureMutation.isPending} data-testid="button-update-fee">
+                {updateFeeStructureMutation.isPending ? 'Updating...' : 'Update Fee Structure'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteFeeDialogOpen} onOpenChange={setIsDeleteFeeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Fee Structure</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{selectedFeeStructure?.name}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteFeeDialogOpen(false)} data-testid="button-cancel-delete-fee">
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeleteFeeStructure} 
+                disabled={deleteFeeStructureMutation.isPending}
+                data-testid="button-confirm-delete-fee"
+              >
+                {deleteFeeStructureMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

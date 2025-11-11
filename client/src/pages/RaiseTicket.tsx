@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { LifeBuoy, Loader2, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LifeBuoy, Loader2, Clock, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useLocation } from 'wouter';
 
 export default function RaiseTicket() {
+  const [, setLocation] = useLocation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -102,16 +104,26 @@ export default function RaiseTicket() {
     }
   };
 
+  const handleGoBack = () => {
+    window.history.length > 1 ? window.history.back() : setLocation('/dashboard');
+  };
+
   return (
     <div className="p-6 max-w-6xl space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <LifeBuoy className="h-6 w-6" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <LifeBuoy className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-semibold">Raise Support Ticket</h1>
+            <p className="text-muted-foreground">Get help from our support team</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-semibold">Raise Support Ticket</h1>
-          <p className="text-muted-foreground">Get help from our support team</p>
-        </div>
+        <Button variant="outline" onClick={handleGoBack} data-testid="button-go-back">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Go Back
+        </Button>
       </div>
 
       <Card>

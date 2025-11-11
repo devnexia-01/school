@@ -196,23 +196,26 @@ export default function Students() {
                 {
                   key: 'actions',
                   header: 'Actions',
-                  cell: (item: any) => (
-                    <div className="flex items-center gap-2">
-                      <Link href={`/students/${item._id}`}>
-                        <Button variant="ghost" size="sm" data-testid={`button-view-${item._id}`}>
-                          View
+                  cell: (item: any) => {
+                    const studentId = item.id || item._id;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <Link href={`/students/${studentId}`}>
+                          <Button variant="ghost" size="sm" data-testid={`button-view-${studentId}`}>
+                            View
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => startTransition(() => setLocation(`/students/${studentId}/edit`))}
+                          data-testid={`button-edit-${studentId}`}
+                        >
+                          Edit
                         </Button>
-                      </Link>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => startTransition(() => setLocation(`/students/${item._id}/edit`))}
-                        data-testid={`button-edit-${item._id}`}
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  ),
+                      </div>
+                    );
+                  },
                 },
               ]}
               isLoading={isLoading}

@@ -229,9 +229,11 @@ export default function Payroll() {
   };
 
   const handleViewSlip = (record: any) => {
+    const name = record.employeeName || record.name || 'employee';
+    const recordId = record._id || record.id;
     toast({
       title: 'Salary Slip',
-      description: `Viewing salary slip for ${record.employeeName}`,
+      description: `Viewing salary slip for ${name}`,
     });
   };
 
@@ -513,7 +515,7 @@ export default function Payroll() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewSlip(item)}
-                        data-testid={`button-view-slip-${item.id}`}
+                        data-testid={`button-view-slip-${item._id || item.id}`}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
