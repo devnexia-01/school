@@ -32,9 +32,14 @@ export function AdminDashboard() {
     queryKey: ['/api/dashboard/admin/recent-activities'],
   });
 
+  const { data: announcementsData, isLoading: isAnnouncementsLoading } = useQuery<{ announcements: Array<any> }>({
+    queryKey: ['/api/announcements'],
+  });
+
   const recentAdmissions = admissionsData?.admissions || [];
   const feeCollectionData = feeCollectionTrends?.trends || [];
   const recentActivities = activitiesData?.activities || [];
+  const announcements = announcementsData?.announcements || [];
 
   return (
     <div className="p-6 space-y-8 max-w-7xl">
@@ -183,6 +188,54 @@ export function AdminDashboard() {
                     <p className="text-sm text-muted-foreground">by {activity.user}</p>
                   </div>
                   <span className="text-sm text-muted-foreground">{activity.time}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Latest Announcements</CardTitle>
+          <CardDescription>Recent announcements and notifications</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isAnnouncementsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : announcements.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">No announcements available</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {announcements.slice(0, 5).map((announcement) => (
+                <div key={announcement._id || announcement.id} className="p-4 rounded-lg border hover-elevate">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h4 className="font-medium mb-1">{announcement.title}</h4>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {announcement.content}
+                      </p>
+                    </div>
+                    {announcement.priority && (
+                      <Badge variant={announcement.priority === 'high' ? 'destructive' : 'secondary'}>
+                        {announcement.priority}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                    {announcement.publishedDate && (
+                      <span>{new Date(announcement.publishedDate).toLocaleDateString()}</span>
+                    )}
+                    {announcement.targetRole && (
+                      <Badge variant="outline" className="text-xs">
+                        {announcement.targetRole}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -102,6 +102,8 @@ export interface IStorage {
   // Fee Structures
   getFeeStructuresByTenant(tenantId: string): Promise<FeeStructure[]>;
   createFeeStructure(feeStructure: InsertFeeStructure): Promise<FeeStructure>;
+  updateFeeStructure(id: string, tenantId: string, feeStructureData: Partial<InsertFeeStructure>): Promise<FeeStructure>;
+  deleteFeeStructure(id: string, tenantId: string): Promise<void>;
   
   // Fee Payments
   getFeePaymentsByStudent(studentId: string, tenantId: string): Promise<FeePayment[]>;
@@ -536,6 +538,25 @@ export class DatabaseStorage implements IStorage {
   async createFeeStructure(insertFeeStructure: InsertFeeStructure): Promise<FeeStructure> {
     const feeStructure = await FeeStructureModel.create(insertFeeStructure);
     return toPlainObject(feeStructure);
+  }
+
+  async updateFeeStructure(id: string, tenantId: string, feeStructureData: Partial<InsertFeeStructure>): Promise<FeeStructure> {
+    const feeStructure = await FeeStructureModel.findOneAndUpdate(
+      { _id: id, tenantId },
+      feeStructureData,
+      { new: true }
+    );
+    if (!feeStructure) {
+      throw new Error('Fee structure not found');
+    }
+    return toPlainObject(feeStructure);
+  }
+
+  async deleteFeeStructure(id: string, tenantId: string): Promise<void> {
+    const result = await FeeStructureModel.deleteOne({ _id: id, tenantId });
+    if (result.deletedCount === 0) {
+      throw new Error('Fee structure not found');
+    }
   }
 
   // Fee Payments

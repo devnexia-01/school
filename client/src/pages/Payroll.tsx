@@ -38,6 +38,7 @@ export default function Payroll() {
   const [generatedPayrolls, setGeneratedPayrolls] = useState<any[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     basicSalary: '',
@@ -229,12 +230,8 @@ export default function Payroll() {
   };
 
   const handleViewSlip = (record: any) => {
-    const name = record.employeeName || record.name || 'employee';
-    const recordId = record._id || record.id;
-    toast({
-      title: 'Salary Slip',
-      description: `Viewing salary slip for ${name}`,
-    });
+    setSelectedPayroll(record);
+    setIsReceiptDialogOpen(true);
   };
 
   const totalPayroll = payrollRecords.reduce((sum, record) => sum + record.netSalary, 0);
@@ -664,6 +661,90 @@ export default function Payroll() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Payroll Receipt
+              </DialogTitle>
+              <DialogDescription>
+                Payroll details for {selectedPayroll?.employeeName || 'employee'}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedPayroll && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-md">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Employee Name</p>
+                    <p className="font-medium">{selectedPayroll.employeeName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Employee ID</p>
+                    <p className="font-medium">{selectedPayroll.employeeId || selectedPayroll.userId || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Month</p>
+                    <p className="font-medium">{selectedPayroll.month || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Year</p>
+                    <p className="font-medium">{selectedPayroll.year || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Basic Salary</span>
+                    <span className="font-medium">{formatCurrencyINR(selectedPayroll.basicSalary || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Allowances</span>
+                    <span className="font-medium text-green-600">{formatCurrencyINR(selectedPayroll.allowances || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Deductions</span>
+                    <span className="font-medium text-red-600">-{formatCurrencyINR(selectedPayroll.deductions || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-t-2 border-primary/20">
+                    <span className="font-semibold text-lg">Net Salary</span>
+                    <span className="font-bold text-lg text-primary">{formatCurrencyINR(selectedPayroll.netSalary || 0)}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-muted rounded-md">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Status</p>
+                    <Badge variant={selectedPayroll.status === 'paid' ? 'default' : 'secondary'}>
+                      {selectedPayroll.status || 'draft'}
+                    </Badge>
+                  </div>
+                  {selectedPayroll.remarks && (
+                    <div className="mt-3">
+                      <p className="text-sm text-muted-foreground mb-1">Remarks</p>
+                      <p className="text-sm">{selectedPayroll.remarks}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)} data-testid="button-close-receipt">
+                Close
+              </Button>
+              <Button onClick={() => {
+                toast({
+                  title: 'Download Started',
+                  description: 'Payroll receipt download started',
+                });
+              }} data-testid="button-download-receipt">
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

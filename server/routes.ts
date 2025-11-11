@@ -656,6 +656,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/fee-structures/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      const feeStructure = await storage.updateFeeStructure(req.params.id, tenantId, req.body);
+      res.json(feeStructure);
+    } catch (error) {
+      console.error('Update fee structure error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.delete('/api/fee-structures/:id', authenticateToken, tenantIsolation, requireRole(['admin', 'super_admin']), async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.tenantId!;
+      await storage.deleteFeeStructure(req.params.id, tenantId);
+      res.status(200).json({ message: 'Fee structure deleted successfully' });
+    } catch (error) {
+      console.error('Delete fee structure error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ============ Fee Payments Routes ============
   app.get('/api/fee-payments/all', authenticateToken, requireRole(['super_admin']), async (req: AuthRequest, res) => {
     try {
