@@ -58,6 +58,12 @@ const menuItems: MenuItem[] = [
     roles: ['super_admin'],
   },
   {
+    title: 'Payment Tracking',
+    icon: Wallet,
+    path: '/payment-tracking',
+    roles: ['super_admin'],
+  },
+  {
     title: 'Students',
     icon: GraduationCap,
     path: '/students',

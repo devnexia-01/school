@@ -24,12 +24,12 @@ export default function SupportTickets() {
 
   const canManageTickets = user && user.role === 'super_admin';
 
-  const { data: ticketsData, isLoading } = useQuery<{ tickets: any[] }>({
+  const { data: ticketsData, isLoading } = useQuery({
     queryKey: ['/api/support-tickets'],
-    enabled: canManageTickets,
+    enabled: !!canManageTickets,
   });
 
-  const tickets = ticketsData?.tickets || [];
+  const tickets = (ticketsData as { tickets: any[] } | undefined)?.tickets || [];
 
   const approveMutation = useMutation({
     mutationFn: async (ticketId: string) => {
@@ -109,9 +109,9 @@ export default function SupportTickets() {
     resolveMutation.mutate(ticket.id);
   };
 
-  const openTickets = tickets.filter(t => t.status === 'open');
-  const inProgressTickets = tickets.filter(t => t.status === 'in_progress');
-  const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+  const openTickets = tickets.filter((t: any) => t.status === 'open');
+  const inProgressTickets = tickets.filter((t: any) => t.status === 'in_progress');
+  const resolvedTickets = tickets.filter((t: any) => t.status === 'resolved' || t.status === 'closed');
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -254,7 +254,7 @@ export default function SupportTickets() {
                     {
                       key: 'ticket',
                       header: 'Ticket',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium" data-testid={`text-ticket-id-${item.id}`}>{item.ticketId}</p>
                           <p className="text-sm text-muted-foreground">{item.title}</p>
@@ -274,7 +274,7 @@ export default function SupportTickets() {
                     {
                       key: 'priority',
                       header: 'Priority',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <Badge variant={getPriorityColor(item.priority)}>
                           {item.priority}
                         </Badge>
@@ -283,7 +283,7 @@ export default function SupportTickets() {
                     {
                       key: 'status',
                       header: 'Status',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <Badge variant={getStatusColor(item.status)} data-testid={`badge-status-${item.id}`}>
                           {item.status.replace('_', ' ')}
                         </Badge>
@@ -292,7 +292,7 @@ export default function SupportTickets() {
                     {
                       key: 'created',
                       header: 'Created',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="text-sm">{formatDate(item.createdAt)}</p>
                           <p className="text-xs text-muted-foreground">by {item.createdBy}</p>
@@ -302,7 +302,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -367,7 +367,7 @@ export default function SupportTickets() {
                     {
                       key: 'ticket',
                       header: 'Ticket',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium">{item.ticketId}</p>
                           <p className="text-sm text-muted-foreground">{item.title}</p>
@@ -387,7 +387,7 @@ export default function SupportTickets() {
                     {
                       key: 'priority',
                       header: 'Priority',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <Badge variant={getPriorityColor(item.priority)}>
                           {item.priority}
                         </Badge>
@@ -401,7 +401,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -442,7 +442,7 @@ export default function SupportTickets() {
                     {
                       key: 'ticket',
                       header: 'Ticket',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium">{item.ticketId}</p>
                           <p className="text-sm text-muted-foreground">{item.title}</p>
@@ -462,7 +462,7 @@ export default function SupportTickets() {
                     {
                       key: 'priority',
                       header: 'Priority',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <Badge variant={getPriorityColor(item.priority)}>
                           {item.priority}
                         </Badge>
@@ -471,7 +471,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
@@ -512,7 +512,7 @@ export default function SupportTickets() {
                     {
                       key: 'ticket',
                       header: 'Ticket',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <div>
                           <p className="font-medium">{item.ticketId}</p>
                           <p className="text-sm text-muted-foreground">{item.title}</p>
@@ -532,7 +532,7 @@ export default function SupportTickets() {
                     {
                       key: 'actions',
                       header: 'Actions',
-                      cell: (item) => (
+                      cell: (item: any) => (
                         <Button
                           variant="ghost"
                           size="sm"
