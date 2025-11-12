@@ -28,6 +28,7 @@ export default function Tenants() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [plan, setPlan] = useState('free');
 
   const canManageTenants = user && user.role === 'super_admin';
 
@@ -41,7 +42,7 @@ export default function Tenants() {
 
   // Mutation to add new tenant
   const addTenantMutation = useMutation({
-    mutationFn: async (data: { name: string; code: string; email?: string; phone?: string; address?: string }) => {
+    mutationFn: async (data: { name: string; code: string; email?: string; phone?: string; address?: string; plan?: string }) => {
       return await apiRequest('/api/tenants', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -60,6 +61,7 @@ export default function Tenants() {
       setEmail('');
       setPhone('');
       setAddress('');
+      setPlan('free');
     },
     onError: (error: Error) => {
       toast({
@@ -86,6 +88,7 @@ export default function Tenants() {
       email: email || undefined,
       phone: phone || undefined,
       address: address || undefined,
+      plan: plan || undefined,
     });
   };
 
@@ -137,6 +140,20 @@ export default function Tenants() {
                       onChange={(e) => setCode(e.target.value)}
                       data-testid="input-school-code" 
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan">Subscription Plan</Label>
+                    <Select value={plan} onValueChange={setPlan}>
+                      <SelectTrigger id="plan" data-testid="select-plan">
+                        <SelectValue placeholder="Select a plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="basic">Basic</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                        <SelectItem value="enterprise">Enterprise</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
@@ -253,6 +270,15 @@ export default function Tenants() {
                         <p className="font-medium">{item.email || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">{item.phone || 'N/A'}</p>
                       </div>
+                    ),
+                  },
+                  {
+                    key: 'plan',
+                    header: 'Plan',
+                    cell: (item: any) => (
+                      <Badge variant={item.plan === 'enterprise' ? 'default' : item.plan === 'premium' ? 'default' : 'secondary'}>
+                        {item.plan ? item.plan.charAt(0).toUpperCase() + item.plan.slice(1) : 'Free'}
+                      </Badge>
                     ),
                   },
                   {

@@ -97,6 +97,7 @@ const TenantSchema = new Schema({
   phone: String,
   address: String,
   logo: String,
+  plan: { type: String, enum: ['free', 'basic', 'premium', 'enterprise'], default: 'free' },
   active: { type: Boolean, default: true, required: true },
   createdAt: { type: Date, default: Date.now, required: true },
 });
@@ -662,6 +663,7 @@ export const insertTenantSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   logo: z.string().optional(),
+  plan: z.enum(['free', 'basic', 'premium', 'enterprise']).optional(),
   active: z.boolean().optional(),
 });
 
